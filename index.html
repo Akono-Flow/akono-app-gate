@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sign In — SCQ Learning Portal</title>
-  <!-- SCQ Auth System — add these in this order -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script>
 <style>
@@ -179,9 +178,7 @@ body::before{
 </style>
 </head>
 <body>
-  <span style="font-size:2rem">🔒</span>
-  Verifying access…
-</div>
+
 <div class="portal-wrap">
   <!-- Header -->
   <div class="portal-header">
@@ -313,7 +310,7 @@ body::before{
 
   <div class="portal-footer">
     <span id="footer-text">SCQ Educational Technology Platform</span><br>
-    Questions? Contact <a href="#" id="footer-email">admin@yourdomain.com</a>
+    Questions? Contact <a href="#" id="footer-email"></a>
   </div>
 </div>
 
@@ -339,7 +336,7 @@ body::before{
   </div>
 </div>
 
-<script src="js/auth.js?v=4"></script>
+<script src="js/auth.js"></script>
 <script>
 // ─── Init branding from config ─────────────────────────────────────────────
 (function () {
@@ -389,11 +386,10 @@ body::before{
   }
 
   var map = {
-    inactive:          { cls:'warning', ic:'⏳', txt:'Your account is pending admin approval. Please check back later or contact support.' },
-    session_conflict:  { cls:'error',   ic:'🔒', txt:'Your session was terminated because another device signed in with your credentials. Please sign in again.' },
-    logged_out:        { cls:'info',    ic:'👋', txt:'You have been signed out successfully.' },
-    no_profile:        { cls:'error',   ic:'⚠️', txt:'An account error occurred. Please contact support.' },
-    not_logged_in:     { cls:'',        ic:'',   txt:'' },
+    inactive:      { cls:'warning', ic:'⏳', txt:'Your account is pending admin approval. Please check back later or contact support.' },
+    logged_out:    { cls:'info',    ic:'👋', txt:'You have been signed out successfully.' },
+    no_profile:    { cls:'error',   ic:'⚠️', txt:'An account error occurred. Please contact support.' },
+    not_logged_in: { cls:'',        ic:'',   txt:'' },
   };
 
   if (reason && map[reason] && map[reason].txt) {
@@ -426,18 +422,17 @@ function hideAlert(id) {
 }
 function setLoading(btnId, textId, loading, text) {
   var btn = document.getElementById(btnId);
-  var lbl = document.getElementById(textId);
   if (loading) {
     btn.disabled  = true;
     btn.innerHTML = '<span class="spinner"></span><span>' + (text || 'Please wait…') + '</span>';
   } else {
-    btn.disabled     = false;
-    btn.innerHTML    = '<span id="' + textId + '">' + text + '</span>';
+    btn.disabled  = false;
+    btn.innerHTML = '<span id="' + textId + '">' + text + '</span>';
   }
 }
 function togglePass(inputId, btn) {
   var inp = document.getElementById(inputId);
-  if (inp.type === 'password') { inp.type = 'text';  btn.textContent = '🙈'; }
+  if (inp.type === 'password') { inp.type = 'text';     btn.textContent = '🙈'; }
   else                         { inp.type = 'password'; btn.textContent = '👁'; }
 }
 
@@ -468,10 +463,11 @@ async function handleLogin() {
       return;
     }
 
-    var uid     = data.user.id;
-    // Fetch profile
+    var uid = data.user.id;
+
+    // Fetch profile to check active status and role
     var { data: profile } = await sb.from('profiles')
-      .select('role, is_active, device_token')
+      .select('role, is_active')
       .eq('id', uid).single();
 
     if (!profile || !profile.is_active) {
@@ -480,9 +476,6 @@ async function handleLogin() {
       setLoading('login-btn','login-btn-text', false, 'Sign In to Portal');
       return;
     }
-
-    // Register device (single-device enforcement)
-    await _scqRegisterDevice(uid);
 
     // Log audit event
     try {
@@ -604,10 +597,7 @@ async function handleForgot() {
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Enter') return;
   if (document.getElementById('panel-login').classList.contains('active')) handleLogin();
-  else handleSignup();
-});
-document.getElementById('forgot-email').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') handleForgot();
+  else if (document.getElementById('panel-signup').classList.contains('active')) handleSignup();
 });
 </script>
 </body>
