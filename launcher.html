@@ -344,7 +344,7 @@ body{
           <div class="app-desc">${escHtml(desc)}</div>
           <div class="app-footer">
             <span class="app-slug">${escHtml(app.slug)}</span>
-            <a class="btn-launch" href="${escAttr(url)}" target="_blank" rel="noopener">
+            <button class="btn-launch" onclick="launchApp('${escAttr(url)}')">
               Launch →
             </a>
           </div>
@@ -356,6 +356,22 @@ body{
   // ── Remove loader ──────────────────────────────────────────────────────────
   document.getElementById('page-loader').remove();
 })();
+
+  async function launchApp(url) {
+  try {
+    var r = await _scqSupabase.auth.getSession();
+    var session = r && r.data && r.data.session ? r.data.session : null;
+    if (session) {
+      var sep = url.includes('#') ? '&' : '#';
+      url += sep
+        + 'access_token='  + session.access_token
+        + '&refresh_token=' + session.refresh_token
+        + '&token_type=bearer'
+        + '&expires_in='    + session.expires_in;
+    }
+  } catch (_) {}
+  window.open(url, '_blank', 'noopener');
+}
 
 function escHtml(s) {
   return String(s)
