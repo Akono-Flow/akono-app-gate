@@ -212,16 +212,16 @@
       return null;
     }
 
+     // App-level access check — admins bypass entirely
+    if (profile.role === 'admin') {
+      return { session: session, profile: profile };
+    }
+
     var status = _deviceStatus(profile);
     if (status === 'conflict') { await _ejectDevice('session_conflict'); return null; }
     if (status === 'fresh')    { await _registerDevice(session.user.id); }
     else                       { await _touch(session.user.id); }
 
-   
-      // App-level access check — admins bypass entirely
-    if (profile.role === 'admin') {
-      return { session: session, profile: profile };
-    }
     var reason = 'plan_denied';
     try {
       var r = await _sb.rpc('check_app_access', { app_slug: slug });
