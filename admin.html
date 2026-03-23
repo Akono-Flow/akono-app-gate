@@ -6,7 +6,7 @@
 <title>Admin Panel — SCQ Learning Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script>
-<script src="js/auth.js?v=4"></script>
+<script src="js/auth.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -312,7 +312,7 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
           <div class="stat-card c-yellow"><div class="stat-lbl">Pending Approval</div><div class="stat-val" id="s-pending">—</div><div class="stat-hint">Awaiting activation</div></div>
           <div class="stat-card c-teal"><div class="stat-lbl">Applications</div><div class="stat-val" id="s-apps">—</div><div class="stat-hint" id="s-apps-h"></div></div>
           <div class="stat-card c-blue"><div class="stat-lbl">Plans</div><div class="stat-val" id="s-plans">—</div><div class="stat-hint">Subscription tiers</div></div>
-          <div class="stat-card c-teal"><div class="stat-lbl">Active Sessions</div><div class="stat-val" id="s-sess">—</div><div class="stat-hint">Devices registered</div></div>
+          <div class="stat-card c-teal"><div class="stat-lbl">Recent Logins</div><div class="stat-val" id="s-sess">—</div><div class="stat-hint">In the last 24 hours</div></div>
         </div>
         <div class="sec-hd"><div class="sec-ttl">Recent Activity</div><button class="btn b-gh btn-sm" onclick="showPanel('audit')">View All →</button></div>
         <div class="twrap"><table class="dt"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead><tbody id="recent-log"></tbody></table></div>
@@ -329,7 +329,7 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
           </div>
           <button class="btn b-gh btn-sm" onclick="exportCSV()" style="margin-left:auto">⬇ Export CSV</button>
         </div>
-        <div class="twrap"><table class="dt"><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Session</th><th>Joined</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="utbl"></tbody></table></div>
+        <div class="twrap"><table class="dt"><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Joined</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="utbl"></tbody></table></div>
         <div id="upager" class="pager"></div>
       </div>
       <!-- PLANS -->
@@ -514,7 +514,7 @@ async function loadStats(){
     document.getElementById('s-apps').textContent=d.total_apps;
     document.getElementById('s-apps-h').textContent=d.active_apps+' active';
     document.getElementById('s-plans').textContent=d.total_plans;
-    document.getElementById('s-sess').textContent=d.active_sessions;
+    document.getElementById('s-sess').textContent=d.recent_logins;
     var pb=document.getElementById('pending-badge');
     if(d.pending_users>0){pb.textContent=d.pending_users;pb.style.display='flex'}
     else{pb.style.display='none'}
@@ -555,7 +555,7 @@ function setUF(f,btn){
 function filterUsers(){
   var q=(document.getElementById('user-q').value||'').toLowerCase();
   filteredUsers=allUsers.filter(function(u){
-    if(u.role==='admin')return false; // admins shown separately
+    if(u.role==='admin')return false;
     var matchQ=!q||(u.email||'').toLowerCase().includes(q)||(u.full_name||'').toLowerCase().includes(q);
     var matchF=true;
     if(userFilter==='active')matchF=u.is_active;
@@ -570,16 +570,14 @@ function renderUsersPage(){
   var start=(userPage-1)*userPPG;
   var slice=filteredUsers.slice(start,start+userPPG);
   var tbody=document.getElementById('utbl');
-  if(!slice.length){tbody.innerHTML='<tr class="erow"><td colspan="7">No users found.</td></tr>';renderUserPager();return}
+  if(!slice.length){tbody.innerHTML='<tr class="erow"><td colspan="6">No users found.</td></tr>';renderUserPager();return}
   tbody.innerHTML=slice.map(function(u){
     var ini=(u.full_name||u.email||'?').split(' ').map(function(n){return n[0]}).join('').toUpperCase().substring(0,2);
     var planOpts='<option value="">— No plan —</option>'+allPlans.map(function(p){return'<option value="'+p.id+'"'+(u.plan_id===p.id?' selected':'')+'>'+esc(p.name)+'</option>'}).join('');
-    var sess=u.device_token?'<span class="bdg bdg-en">● Active</span>':'<span style="font-size:.72rem;color:var(--t3)">None</span>';
     var notes=u.notes?('<span style="font-size:.75rem;color:var(--t2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block" title="'+esc(u.notes)+'">'+esc(u.notes.substring(0,40))+'</span>'):'<span style="color:var(--t3);font-size:.75rem">—</span>';
     return '<tr data-uid="'+u.id+'"><td><div class="uc"><div class="uav">'+esc(ini)+'</div><div><div class="uname">'+esc(u.full_name||'(no name)')+'</div><div class="uemail">'+esc(u.email)+'</div></div></div></td>'
       +'<td><select class="isel" onchange="setUserPlan(\''+u.id+'\',this.value)">'+planOpts+'</select></td>'
       +'<td>'+(u.is_active?'<span class="bdg bdg-on">✓ Active</span>':'<span class="bdg bdg-off">⏳ Pending</span>')+'</td>'
-      +'<td>'+sess+'</td>'
       +'<td>'+(u.created_at?fmtDate(u.created_at):'—')+'</td>'
       +'<td>'+notes+'</td>'
       +'<td><div class="acts">'
@@ -587,7 +585,6 @@ function renderUsersPage(){
         ?'<button class="ab warn" title="Deactivate" onclick="toggleActive(\''+u.id+'\',false,\''+esc(u.email)+'\')">⏸</button>'
         :'<button class="ab suc" title="Activate" onclick="toggleActive(\''+u.id+'\',true,\''+esc(u.email)+'\')">▶</button>')
       +'<button class="ab" title="Edit notes" onclick="openNotes(\''+u.id+'\',\''+esc(u.notes||'')+'\',\''+esc(u.email)+'\')">📝</button>'
-      +'<button class="ab warn" title="Revoke session (force re-login)" onclick="revokeSession(\''+u.id+'\',\''+esc(u.email)+'\')">🔒</button>'
       +(adminProfile&&adminProfile.id!==u.id?'<button class="ab dan" title="Delete user" onclick="confirmDelete(\''+u.id+'\',\''+esc(u.email)+'\')">🗑</button>':'')
       +'</div></td></tr>';
   }).join('');
@@ -624,16 +621,6 @@ async function toggleActive(uid,active,email){
     var idx=allUsers.findIndex(function(x){return x.id===uid});
     if(idx>-1)allUsers[idx].is_active=active;
     toast(active?'User activated':'User deactivated','suc');
-    filterUsers();loadStats();
-  }catch(e){toast('Error: '+e.message,'err')}
-}
-async function revokeSession(uid,email){
-  try{
-    await sb.rpc('admin_revoke_session',{p_target_id:uid});
-    await sb.rpc('log_audit',{p_action:'revoke_session',p_details:{},p_target_user_id:uid,p_target_user_email:email});
-    var idx=allUsers.findIndex(function(x){return x.id===uid});
-    if(idx>-1){allUsers[idx].device_token=null}
-    toast('Session revoked — user will be forced to re-login','suc');
     filterUsers();loadStats();
   }catch(e){toast('Error: '+e.message,'err')}
 }
@@ -690,12 +677,10 @@ async function renderPlans(){
   await loadAllPlans();
   var grid=document.getElementById('plan-grid');
   if(!allPlans.length){grid.innerHTML='<div style="color:var(--t3);font-size:.85rem">No plans yet. Click + New Plan.</div>';return}
-  // count users per plan
   var counts={};
   allUsers.forEach(function(u){if(u.plan_id)counts[u.plan_id]=(counts[u.plan_id]||0)+1});
   grid.innerHTML=allPlans.map(function(p){
     var uc=counts[p.id]||0;
-    // count apps in plan
     return '<div class="plan-card">'
       +'<div style="display:flex;align-items:center;justify-content:space-between">'
       +'<div class="pc-name">'+esc(p.name)+'</div>'
@@ -755,7 +740,6 @@ async function openPlanApps(planId,planName){
   document.getElementById('pam-title').textContent='Manage Apps — '+planName;
   document.getElementById('acl').innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Loading…</div>';
   openM('m-paApps');
-  // Load current app_ids for this plan
   var r=await sb.from('plan_apps').select('app_id').eq('plan_id',planId);
   var current=new Set((r.data||[]).map(function(x){return x.app_id}));
   document.getElementById('acl').innerHTML=allApps.length?allApps.map(function(a){
@@ -786,7 +770,6 @@ async function loadAllApps(){
 }
 async function renderApps(){
   await loadAllApps();
-  // For each app, count how many plans include it
   var planCountMap={};
   var r=await sb.from('plan_apps').select('app_id,plan_id');
   (r.data||[]).forEach(function(x){planCountMap[x.app_id]=(planCountMap[x.app_id]||0)+1});
@@ -842,7 +825,6 @@ function slugify(){
       .replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
     document.getElementById('am-slug').value=s;
   }
-  // if editing, don't auto-change slug
 }
 async function saveApp(){
   var name=document.getElementById('am-name').value.trim();
