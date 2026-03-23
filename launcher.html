@@ -6,7 +6,7 @@
 <title>My Apps — SCQ Learning Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script>
-<script src="js/auth.js?v=4"></script>
+<script src="js/auth.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -344,9 +344,9 @@ body{
           <div class="app-desc">${escHtml(desc)}</div>
           <div class="app-footer">
             <span class="app-slug">${escHtml(app.slug)}</span>
-            <button class="btn-launch" onclick="launchApp('${escAttr(url)}')">
+            <a class="btn-launch" href="${escAttr(url)}" target="_blank" rel="noopener">
               Launch →
-            </button>
+            </a>
           </div>
         </div>
       `;
@@ -364,18 +364,6 @@ function escHtml(s) {
 }
 function escAttr(s) {
   return String(s).replace(/"/g,'&quot;');
-}
-  async function launchApp(url) {
-  var s = await _scqSupabase.auth.getSession();
-  var session = s && s.data && s.data.session;
-  if (session) {
-    var hash = '#access_token=' + session.access_token
-             + '&refresh_token=' + session.refresh_token
-             + '&token_type=bearer';
-    window.open(url + hash, '_blank');
-  } else {
-    window.open(url, '_blank');
-  }
 }
 </script>
 </body>
