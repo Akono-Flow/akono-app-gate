@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// auth.js — SCQ Auth System v3.0
+// auth.js — SCQ Auth System v3.1
 //
 // Exposes:
 //   requireAuth()                          → use on launcher.html, admin.html
@@ -10,8 +10,8 @@
 //
 // Depends on: supabase-js v2 (CDN), config.js  (must both load before this)
 //
-// v3.0 changes: Removed single-device enforcement. Any number of concurrent
-// sessions per account are now permitted.
+// v3.0 changes: Removed single-device enforcement.
+// v3.1 changes: Added presence tracking (last_seen + current_app heartbeat).
 // ─────────────────────────────────────────────────────────────────────────────
 
 (function (global) {
@@ -82,6 +82,46 @@
     } catch (_) { return null; }
   }
 
+  // ── Presence tracking ─────────────────────────────────────────────────────
+  var _heartbeatInterval = null;
+  var HEARTBEAT_MS = 2 * 60 * 1000; // 2 minutes
+
+  async function _updatePresence(uid, slug) {
+    try {
+      await _sb.from('profiles').update({
+        last_seen:   new Date().toISOString(),
+        current_app: slug || null
+      }).eq('id', uid);
+    } catch (_) {}
+  }
+
+  function _startHeartbeat(uid, slug) {
+    _stopHeartbeat();
+    _heartbeatInterval = setInterval(function () {
+      _updatePresence(uid, slug);
+    }, HEARTBEAT_MS);
+
+    // Also clear presence when the tab is closed / navigated away
+    window.addEventListener('beforeunload', function () {
+      _stopHeartbeat();
+      // Best-effort sync clear on unload (may not always fire)
+      try {
+        navigator.sendBeacon && navigator.sendBeacon(''); // no-op, just keeps pattern clean
+        _sb.from('profiles').update({ current_app: null }).eq('id', uid);
+      } catch (_) {}
+    });
+  }
+
+  function _stopHeartbeat() {
+    if (_heartbeatInterval) {
+      clearInterval(_heartbeatInterval);
+      _heartbeatInterval = null;
+    }
+  }
+
+  // Expose so apps can call stopHeartbeat on manual logout if needed
+  global._scqStopHeartbeat = _stopHeartbeat;
+
   // ═══════════════════════════════════════════════════════════════════════════
   // PUBLIC API
   // ═══════════════════════════════════════════════════════════════════════════
@@ -150,6 +190,9 @@
       var r = await _sb.rpc('check_app_access', { app_slug: slug });
       var result = (r && r.data) ? r.data : 'plan_denied';
       if (result === 'ok') {
+        // Write presence immediately, then start heartbeat
+        await _updatePresence(session.user.id, slug);
+        _startHeartbeat(session.user.id, slug);
         return { session: session, profile: profile };
       }
       reason = result;
@@ -168,6 +211,7 @@
    * Attach to any logout button: onclick="scqLogout()"
    */
   global.scqLogout = async function () {
+    _stopHeartbeat();
     try { await _sb.auth.signOut(); } catch (_) {}
     _goLogin('logged_out');
   };
