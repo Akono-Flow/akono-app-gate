@@ -283,7 +283,6 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
       </button>
       <button class="nav-item" onclick="showPanel('plans')"><span class="ni">📦</span>Plans</button>
       <button class="nav-item" onclick="showPanel('apps')"><span class="ni">🗂️</span>Applications</button>
-      <button class="nav-item" onclick="showPanel('online')"><span class="ni">🟢</span>Who's Online</button>
       <hr class="ndiv">
       <div class="nav-sec">System</div>
       <button class="nav-item" onclick="showPanel('audit')"><span class="ni">📋</span>Audit Log</button>
@@ -313,11 +312,6 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
           <div class="stat-card c-yellow"><div class="stat-lbl">Pending Approval</div><div class="stat-val" id="s-pending">—</div><div class="stat-hint">Awaiting activation</div></div>
           <div class="stat-card c-teal"><div class="stat-lbl">Applications</div><div class="stat-val" id="s-apps">—</div><div class="stat-hint" id="s-apps-h"></div></div>
           <div class="stat-card c-blue"><div class="stat-lbl">Plans</div><div class="stat-val" id="s-plans">—</div><div class="stat-hint">Subscription tiers</div></div>
-          <div class="stat-card c-green" style="border-color:#10b981;cursor:pointer" onclick="showPanel('online')" title="Click to see who's online">
-            <div class="stat-lbl">🟢 Online Now</div>
-            <div class="stat-val" id="s-online">—</div>
-            <div class="stat-hint">Active in last 5 min — click to view</div>
-          </div>
           <div class="stat-card c-teal"><div class="stat-lbl">Recent Logins</div><div class="stat-val" id="s-sess">—</div><div class="stat-hint">In the last 24 hours</div></div>
         </div>
         <div class="sec-hd"><div class="sec-ttl">Recent Activity</div><button class="btn b-gh btn-sm" onclick="showPanel('audit')">View All →</button></div>
@@ -347,40 +341,6 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
       <div class="panel" id="panel-apps">
         <div class="sec-hd"><div class="sec-ttl">Application Registry</div><button class="btn b-pri btn-sm" onclick="openAppModal(null)">+ Register App</button></div>
         <div class="twrap"><table class="dt"><thead><tr><th>App</th><th>Slug</th><th>URL</th><th>Plans</th><th>Status</th><th>Actions</th></tr></thead><tbody id="atbl"></tbody></table></div>
-      </div>
-      <!-- ONLINE -->
-      <div class="panel" id="panel-online">
-        <div class="toolbar">
-          <div style="font-size:.82rem;color:var(--t2)">Showing users active in the last <strong style="color:var(--t1)" id="online-window">5</strong> minutes. Auto-refreshes every 30 seconds.</div>
-          <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
-            <label style="font-size:.75rem;color:var(--t3)">Window:</label>
-            <select class="isel" onchange="setOnlineWindow(this.value)" id="online-sel">
-              <option value="2">2 min</option>
-              <option value="5" selected>5 min</option>
-              <option value="10">10 min</option>
-              <option value="15">15 min</option>
-            </select>
-            <button class="btn b-gh btn-sm" onclick="loadOnline()">↻ Refresh</button>
-          </div>
-        </div>
-        <div class="twrap">
-          <table class="dt">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Plan</th>
-                <th>Currently Using</th>
-                <th>Last Seen</th>
-                <th>Since</th>
-              </tr>
-            </thead>
-            <tbody id="online-tbl"></tbody>
-          </table>
-        </div>
-        <div id="online-empty" style="display:none;text-align:center;padding:48px 24px;color:var(--t3);font-size:.85rem">
-          <div style="font-size:2.5rem;margin-bottom:12px">💤</div>
-          No students are currently active.
-        </div>
       </div>
       <!-- AUDIT -->
       <div class="panel" id="panel-audit">
@@ -465,6 +425,16 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
     </div>
   </div>
 </div>
+<!-- MODAL: User Features -->
+<div class="mbd" id="m-features">
+  <div class="modal m-md">
+    <button class="m-x" onclick="closeM('m-features')">✕</button>
+    <div class="m-title">App Feature Access</div>
+    <div class="m-sub" id="feat-sub">Manage per-feature access for this user.</div>
+    <div id="feat-list"><div style="text-align:center;padding:20px;color:var(--t3)">Loading…</div></div>
+    <div class="m-foot"><button class="btn b-gh" onclick="closeM('m-features')">Close</button></div>
+  </div>
+</div>
 <div id="toast-wrap"></div>
 <script>
 // ═══════════════════════════════════════════════════════════════════
@@ -513,7 +483,6 @@ var currentPanel='overview';
 var panelMeta={
   overview:{title:'Dashboard',sub:'System overview'},
   users:   {title:'Users',    sub:'Manage user accounts and access'},
-  online:  {title:"Who's Online", sub:'Students active in the last 5 minutes'},
   plans:   {title:'Plans',    sub:'Manage subscription tiers'},
   apps:    {title:'Applications',sub:'Manage the app registry'},
   audit:   {title:'Audit Log',sub:'All admin and auth events'}
@@ -530,7 +499,6 @@ function showPanel(id){
   document.getElementById('tb-sub').textContent=m.sub;
   closeSidebar();
   if(id==='users')   loadUsers();
-  if(id==='online')  loadOnline();
   if(id==='plans')   renderPlans();
   if(id==='apps')    renderApps();
   if(id==='audit')   loadAudit();
@@ -557,18 +525,11 @@ async function loadStats(){
     document.getElementById('s-apps-h').textContent=d.active_apps+' active';
     document.getElementById('s-plans').textContent=d.total_plans;
     document.getElementById('s-sess').textContent=d.recent_logins;
-    document.getElementById('s-online').textContent=d.online_now||0;
     var pb=document.getElementById('pending-badge');
     if(d.pending_users>0){pb.textContent=d.pending_users;pb.style.display='flex'}
     else{pb.style.display='none'}
   }catch(e){console.warn('Stats error',e)}
 }
-
-// Auto-refresh stats and online panel every 30 seconds
-setInterval(function(){
-  loadStats();
-  if(currentPanel==='online') loadOnline();
-}, 30000);
 
 // ═══════════════════════════════════════════════════════════════════
 // RECENT LOG (overview)
@@ -634,6 +595,7 @@ function renderUsersPage(){
         ?'<button class="ab warn" title="Deactivate" onclick="toggleActive(\''+u.id+'\',false,\''+esc(u.email)+'\')">⏸</button>'
         :'<button class="ab suc" title="Activate" onclick="toggleActive(\''+u.id+'\',true,\''+esc(u.email)+'\')">▶</button>')
       +'<button class="ab" title="Edit notes" onclick="openNotes(\''+u.id+'\',\''+esc(u.notes||'')+'\',\''+esc(u.email)+'\')">📝</button>'
+      +'<button class="ab" title="Manage app feature access" onclick="openFeatures(\''+u.id+'\',\''+esc(u.email)+'\')">🔧</button>'
       +(adminProfile&&adminProfile.id!==u.id?'<button class="ab dan" title="Delete user" onclick="confirmDelete(\''+u.id+'\',\''+esc(u.email)+'\')">🗑</button>':'')
       +'</div></td></tr>';
   }).join('');
@@ -713,62 +675,6 @@ function exportCSV(){
   }).join('\n');
   var blob=new Blob([hdr+rows],{type:'text/csv'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='users-export.csv';a.click();
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// WHO'S ONLINE
-// ═══════════════════════════════════════════════════════════════════
-var onlineWindowMins = 5;
-
-function setOnlineWindow(val) {
-  onlineWindowMins = parseInt(val) || 5;
-  document.getElementById('online-window').textContent = onlineWindowMins;
-  loadOnline();
-}
-
-async function loadOnline() {
-  try {
-    var r = await sb.rpc('admin_get_online_users', { p_minutes: onlineWindowMins });
-    renderOnline(r.data || []);
-    // also refresh the stat badge
-    document.getElementById('s-online').textContent = (r.data || []).length;
-  } catch(e) { toast('Online fetch error: ' + e.message, 'err'); }
-}
-
-function renderOnline(rows) {
-  var tbody = document.getElementById('online-tbl');
-  var empty = document.getElementById('online-empty');
-  if (!rows.length) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-  var now = Date.now();
-  tbody.innerHTML = rows.map(function(u) {
-    var ini = (u.full_name || u.email || '?').split(' ').map(function(n){return n[0]}).join('').toUpperCase().substring(0,2);
-    var lastSeen = u.last_seen ? new Date(u.last_seen) : null;
-    var secsAgo = lastSeen ? Math.floor((now - lastSeen.getTime()) / 1000) : null;
-    var agoStr = secsAgo === null ? '—'
-      : secsAgo < 60  ? secsAgo + 's ago'
-      : secsAgo < 3600 ? Math.floor(secsAgo/60) + 'm ago'
-      : fmtDt(u.last_seen);
-    var freshness = secsAgo !== null && secsAgo < 130
-      ? 'color:#34d399' // green — heartbeat just fired
-      : 'color:#fcd34d'; // yellow — older but within window
-    var appLabel = u.current_app
-      ? '<span class="slug">' + esc(u.current_app) + '</span>'
-      : '<span style="color:var(--t3);font-size:.75rem">—</span>';
-    return '<tr>'
-      + '<td><div class="uc"><div class="uav">' + esc(ini) + '</div>'
-      + '<div><div class="uname">' + esc(u.full_name || '(no name)') + '</div>'
-      + '<div class="uemail">' + esc(u.email) + '</div></div></div></td>'
-      + '<td>' + (u.plan_name ? '<span class="bdg bdg-plan">' + esc(u.plan_name) + '</span>' : '<span style="color:var(--t3);font-size:.75rem">—</span>') + '</td>'
-      + '<td>' + appLabel + '</td>'
-      + '<td><span style="font-size:.78rem;' + freshness + '">' + agoStr + '</span></td>'
-      + '<td style="font-size:.75rem;color:var(--t3)">' + (lastSeen ? lastSeen.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}) : '—') + '</td>'
-      + '</tr>';
-  }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1018,6 +924,92 @@ function renderLogPager(){
   el.innerHTML=html;
 }
 function goLPage(p){logPage=p;renderLogPage()}
+
+// ═══════════════════════════════════════════════════════════════════
+// USER FEATURES
+// ═══════════════════════════════════════════════════════════════════
+// Add entries here whenever you add a new per-user feature to any app.
+// app_slug must match the slug registered in the Applications tab.
+// feature_key must match the key checked in the app's script.js.
+var MANAGED_FEATURES = [
+  {
+    app_slug:    'b26',
+    feature_key: 'export_csv',
+    label:       'Quiz Biz — Export CSV',
+    description: 'Allow this user to export filtered question data to CSV'
+  }
+];
+
+var featTargetId = null;
+
+async function openFeatures(uid, email) {
+  featTargetId = uid;
+  document.getElementById('feat-sub').textContent = 'Feature access for: ' + email;
+  document.getElementById('feat-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3)">Loading…</div>';
+  openM('m-features');
+
+  // Load current feature rows for this user from the table directly
+  var featureMap = {};
+  try {
+    var r = await sb.from('user_app_features')
+      .select('app_slug, feature_key, enabled')
+      .eq('user_id', uid);
+    (r.data || []).forEach(function(f) {
+      featureMap[f.app_slug + ':' + f.feature_key] = f.enabled;
+    });
+  } catch(e) {
+    toast('Error loading features: ' + e.message, 'err');
+    document.getElementById('feat-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger)">Failed to load features.</div>';
+    return;
+  }
+
+  // Render a toggle row for each managed feature
+  var html = MANAGED_FEATURES.map(function(f) {
+    var mapKey  = f.app_slug + ':' + f.feature_key;
+    var enabled = featureMap[mapKey] === true;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;'
+      + 'padding:14px 2px;border-bottom:1px solid var(--border-s)">'
+      + '<div style="flex:1;min-width:0">'
+      + '<div style="font-size:.85rem;font-weight:600;color:var(--t1)">' + esc(f.label) + '</div>'
+      + '<div style="font-size:.73rem;color:var(--t3);margin-top:3px">' + esc(f.description) + '</div>'
+      + '</div>'
+      + '<label class="tog" style="flex-shrink:0;margin-left:20px">'
+      + '<input type="checkbox"'
+      + (enabled ? ' checked' : '')
+      + ' onchange="toggleFeature(\'' + esc(uid) + '\',\'' + esc(f.app_slug) + '\',\''
+      + esc(f.feature_key) + '\',this.checked,\'' + esc(email) + '\')">'
+      + '<span class="tslider"></span>'
+      + '</label>'
+      + '</div>';
+  }).join('');
+
+  if (!html) {
+    html = '<div style="text-align:center;padding:20px;color:var(--t3)">No features configured.</div>';
+  }
+  document.getElementById('feat-list').innerHTML = '<div style="padding:0 4px">' + html + '</div>';
+}
+
+async function toggleFeature(uid, appSlug, featureKey, enabled, email) {
+  try {
+    await sb.rpc('admin_set_user_feature', {
+      p_user_id:     uid,
+      p_app_slug:    appSlug,
+      p_feature_key: featureKey,
+      p_enabled:     enabled
+    });
+    await sb.rpc('log_audit', {
+      p_action:            'set_user_feature',
+      p_details:           { app_slug: appSlug, feature_key: featureKey, enabled: enabled },
+      p_target_user_id:    uid,
+      p_target_user_email: email
+    });
+    toast((enabled ? 'Enabled' : 'Disabled') + ': ' + featureKey, 'suc');
+  } catch(e) {
+    toast('Error: ' + e.message, 'err');
+    // Reload the modal to reset the toggle back to its real state
+    openFeatures(uid, email);
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // MODAL HELPERS
