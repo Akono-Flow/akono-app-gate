@@ -217,7 +217,11 @@
     if (status === 'fresh')    { await _registerDevice(session.user.id); }
     else                       { await _touch(session.user.id); }
 
-    // App-level access check
+   
+      // App-level access check — admins bypass entirely
+    if (profile.role === 'admin') {
+      return { session: session, profile: profile };
+    }
     var reason = 'plan_denied';
     try {
       var r = await _sb.rpc('check_app_access', { app_slug: slug });
@@ -253,8 +257,16 @@
    * Used by launcher.html to render the app grid.
    * @returns {Array<{id, name, slug, url, description, icon, is_active}>}
    */
-  global.getMyApps = async function () {
+   global.getMyApps = async function () {
     try {
+      var session = await _getSession();
+      if (session) {
+        var profile = await _getProfile(session.user.id);
+        if (profile && profile.role === 'admin') {
+          var r = await _sb.from('apps').select('*').eq('is_active', true);
+          return (r && r.data) ? r.data : [];
+        }
+      }
       var r = await _sb.rpc('get_my_apps');
       return (r && r.data) ? r.data : [];
     } catch (_) { return []; }
