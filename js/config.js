@@ -23,12 +23,12 @@ const AUTH_BASE_URL = 'https://YOUR_GITHUB_USERNAME.github.io/YOUR_AUTH_REPO';
 
 // ── Portal Branding ────────────────────────────────────────────────────────────
 const PORTAL_CONFIG = {
-  institutionName  : 'SCQ Learning Portal',   // Full name shown in headings
-  institutionShort : 'SCQ',                    // Abbreviation shown in badges/nav
+  institutionName  : 'Akono Learning Portal',   // Full name shown in headings
+  institutionShort : 'AF',                    // Abbreviation shown in badges/nav
   tagline          : 'Science & Competition Excellence',
-  supportEmail     : 'admin@yourdomain.com',
-  logoInitials     : 'SCQ',                    // 2–4 letters for the circular emblem
-  footerText       : 'SCQ Educational Technology Platform',
+  supportEmail     : 'colem3846@gmail.com',
+  logoInitials     : 'AF',                    // 2–4 letters for the circular emblem
+  footerText       : 'Akono Flow Educational Technology Platform',
   // Theme override (optional — leave as-is for the default academic blue)
   accentColor      : '#2563eb',
 };
