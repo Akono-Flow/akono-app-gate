@@ -77,11 +77,24 @@
 
   // ── getSession ─────────────────────────────────────────────────────────────
   async function _getSession() {
-    try {
-      var r = await _sb.auth.getSession();
-      return (r && r.data && r.data.session) ? r.data.session : null;
-    } catch (_) { return null; }
-  }
+  try {
+    var r = await _sb.auth.getSession();
+    if (r && r.data && r.data.session) return r.data.session;
+
+    // No session found — wait for URL hash to be processed (cross-subdomain launch)
+    return new Promise(function (resolve) {
+      var sub = _sb.auth.onAuthStateChange(function (event, session) {
+        sub.data.subscription.unsubscribe();
+        resolve(session || null);
+      });
+      // Timeout after 4 seconds to avoid hanging forever
+      setTimeout(function () {
+        try { sub.data.subscription.unsubscribe(); } catch (_) {}
+        resolve(null);
+      }, 4000);
+    });
+  } catch (_) { return null; }
+}
 
   // ── getProfile ─────────────────────────────────────────────────────────────
   async function _getProfile(uid) {
