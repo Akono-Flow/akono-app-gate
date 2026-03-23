@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — SCQ Learning Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-0:#050911;--bg-1:#0a0f1e;--bg-2:#111827;--bg-3:#1a2236;
+  --border:#1e3a5f;--border-s:rgba(255,255,255,.06);
+  --accent:#2563eb;--accent-h:#1d4ed8;--accent-dim:rgba(37,99,235,.12);
+  --teal:#0891b2;--success:#059669;--warning:#d97706;--danger:#dc2626;
+  --t1:#f1f5f9;--t2:#94a3b8;--t3:#475569;
+  --r:10px;--r-lg:16px;--shadow:0 8px 40px rgba(0,0,0,.6);
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif
+}
+html,body{min-height:100%;font-family:var(--font);background:var(--bg-0);color:var(--t1)}
+body{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px 16px;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% -10%,rgba(37,99,235,.18) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 80%,rgba(8,145,178,.09) 0%,transparent 60%);
+}
+/* ── Grid pattern ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(37,99,235,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,.04) 1px,transparent 1px);
+  background-size:60px 60px
+}
+.portal-wrap{position:relative;z-index:1;width:100%;max-width:480px}
+
+/* ── Header ── */
+.portal-header{text-align:center;margin-bottom:32px}
+.emblem{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8 0%,#0891b2 100%);
+  font-size:1.5rem;font-weight:800;letter-spacing:.05em;color:#fff;
+  margin-bottom:16px;box-shadow:0 4px 24px rgba(37,99,235,.35);
+  border:2px solid rgba(255,255,255,.12)
+}
+.portal-name{font-size:1.5rem;font-weight:700;color:var(--t1);letter-spacing:-.02em}
+.portal-tagline{font-size:.8rem;color:var(--t2);margin-top:4px;letter-spacing:.08em;text-transform:uppercase}
+
+/* ── Card ── */
+.card{
+  background:var(--bg-2);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:36px 40px;
+  box-shadow:var(--shadow)
+}
+@media(max-width:520px){.card{padding:28px 20px}}
+
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:28px}
+.tab{
+  flex:1;text-align:center;padding:10px;font-size:.85rem;font-weight:600;
+  cursor:pointer;color:var(--t3);letter-spacing:.04em;text-transform:uppercase;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color .18s,border-color .18s
+}
+.tab:hover{color:var(--t2)}
+.tab.active{color:var(--accent);border-color:var(--accent)}
+
+/* ── Forms ── */
+.form-panel{display:none}.form-panel.active{display:block}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:.78rem;font-weight:600;color:var(--t2);margin-bottom:7px;letter-spacing:.04em;text-transform:uppercase}
+.field input{
+  width:100%;padding:11px 14px;background:var(--bg-3);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--t1);font-size:.95rem;font-family:var(--font);
+  outline:none;transition:border-color .18s,box-shadow .18s
+}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.field input::placeholder{color:var(--t3)}
+.field input:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── Password toggle ── */
+.field.pass-field{position:relative}
+.field.pass-field input{padding-right:44px}
+.toggle-pass{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--t3);font-size:1.1rem;
+  padding:4px;display:flex;align-items:center;justify-content:center
+}
+.toggle-pass:hover{color:var(--t2)}
+
+.pass-hint{font-size:.72rem;color:var(--t3);margin-top:5px}
+
+/* ── Checkbox ── */
+.check-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px}
+.check-row input[type=checkbox]{
+  width:16px;height:16px;margin-top:2px;accent-color:var(--accent);cursor:pointer;flex-shrink:0
+}
+.check-row label{font-size:.83rem;color:var(--t2);cursor:pointer;line-height:1.5}
+
+/* ── Alert ── */
+.alert{
+  padding:12px 16px;border-radius:var(--r);font-size:.85rem;margin-bottom:20px;
+  border-left:3px solid;display:flex;align-items:flex-start;gap:10px;
+  line-height:1.5;display:none
+}
+.alert.show{display:flex}
+.alert.info{background:var(--accent-dim);border-color:var(--accent);color:#93c5fd}
+.alert.success{background:rgba(5,150,105,.12);border-color:var(--success);color:#6ee7b7}
+.alert.warning{background:rgba(217,119,6,.12);border-color:var(--warning);color:#fcd34d}
+.alert.error{background:rgba(220,38,38,.12);border-color:var(--danger);color:#fca5a5}
+.alert-icon{font-size:1rem;flex-shrink:0;margin-top:1px}
+
+/* ── Buttons ── */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:12px 20px;border:none;border-radius:var(--r);
+  font-size:.9rem;font-weight:600;font-family:var(--font);cursor:pointer;
+  letter-spacing:.03em;transition:all .18s;text-decoration:none
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-h);transform:translateY(-1px);box-shadow:0 4px 16px rgba(37,99,235,.35)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.spinner{
+  width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Links ── */
+.link-row{text-align:center;margin-top:16px}
+.link-row a{color:var(--teal);text-decoration:none;font-size:.82rem}
+.link-row a:hover{text-decoration:underline}
+
+/* ── Divider ── */
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+
+/* ── Success state ── */
+.success-box{text-align:center;padding:12px 0}
+.success-icon{font-size:3rem;margin-bottom:14px}
+.success-title{font-size:1.15rem;font-weight:700;color:var(--t1);margin-bottom:10px}
+.success-msg{font-size:.85rem;color:var(--t2);line-height:1.6;max-width:340px;margin:0 auto}
+.steps-list{text-align:left;margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.step{display:flex;gap:10px;font-size:.83rem;color:var(--t2);align-items:flex-start}
+.step-num{
+  width:22px;height:22px;border-radius:50%;background:var(--accent-dim);
+  color:var(--accent);font-size:.72rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px
+}
+
+/* ── Footer ── */
+.portal-footer{
+  text-align:center;margin-top:24px;font-size:.72rem;color:var(--t3);line-height:1.7
+}
+.portal-footer a{color:var(--t2);text-decoration:none}
+.portal-footer a:hover{color:var(--accent)}
+
+/* ── Forgot password modal ── */
+.modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:100;align-items:center;justify-content:center;padding:16px
+}
+.modal-backdrop.open{display:flex}
+.modal{
+  background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:32px;width:100%;max-width:420px;box-shadow:var(--shadow)
+}
+.modal h3{font-size:1.1rem;font-weight:700;margin-bottom:8px}
+.modal p{font-size:.84rem;color:var(--t2);margin-bottom:20px;line-height:1.6}
+.modal-btns{display:flex;gap:12px;margin-top:20px}
+.btn-ghost{
+  flex:1;padding:10px;border:1px solid var(--border);border-radius:var(--r);
+  background:transparent;color:var(--t2);cursor:pointer;font-size:.85rem;font-family:var(--font);
+  transition:all .18s
+}
+.btn-ghost:hover{border-color:var(--t2);color:var(--t1)}
+</style>
+</head>
+<body>
+
+<div class="portal-wrap">
+  <!-- Header -->
+  <div class="portal-header">
+    <div class="emblem" id="emblem">SCQ</div>
+    <div class="portal-name" id="portal-name">SCQ Learning Portal</div>
+    <div class="portal-tagline" id="portal-tagline">Science &amp; Competition Excellence</div>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+    <!-- Reason alert (from URL params) -->
+    <div class="alert" id="reason-alert">
+      <span class="alert-icon" id="reason-icon"></span>
+      <span id="reason-msg"></span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" id="tab-login" onclick="switchTab('login')">Sign In</div>
+      <div class="tab" id="tab-signup" onclick="switchTab('signup')">Register</div>
+    </div>
+
+    <!-- ── LOGIN PANEL ── -->
+    <div class="form-panel active" id="panel-login">
+      <div class="alert" id="login-alert">
+        <span class="alert-icon" id="login-alert-icon"></span>
+        <span id="login-alert-msg"></span>
+      </div>
+
+      <div class="field">
+        <label for="login-email">Email Address</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+
+      <div class="field pass-field">
+        <label for="login-pass">Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+        <button type="button" class="toggle-pass" onclick="togglePass('login-pass',this)" tabindex="-1">👁</button>
+      </div>
+
+      <div style="text-align:right;margin-bottom:20px">
+        <a href="#" style="font-size:.8rem;color:var(--teal);text-decoration:none"
+           onclick="openForgot();return false">Forgot password?</a>
+      </div>
+
+      <button class="btn btn-primary" id="login-btn" onclick="handleLogin()">
+        <span id="login-btn-text">Sign In to Portal</span>
+      </button>
+
+      <div class="link-row">
+        <a href="#" onclick="switchTab('signup');return false">Don't have an account? Register here</a>
+      </div>
+    </div>
+
+    <!-- ── SIGNUP PANEL ── -->
+    <div class="form-panel" id="panel-signup">
+      <div class="alert info show" style="margin-bottom:20px">
+        <span class="alert-icon">ℹ️</span>
+        <span>After email verification, your account will be reviewed for approval before you can sign in.</span>
+      </div>
+
+      <div class="alert" id="signup-alert">
+        <span class="alert-icon" id="signup-alert-icon"></span>
+        <span id="signup-alert-msg"></span>
+      </div>
+
+      <div id="signup-form">
+        <div class="field">
+          <label for="signup-name">Full Name</label>
+          <input type="text" id="signup-name" placeholder="First and last name" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="signup-email">Email Address</label>
+          <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="field pass-field">
+          <label for="signup-pass">Password</label>
+          <input type="password" id="signup-pass" placeholder="At least 8 characters" autocomplete="new-password">
+          <button type="button" class="toggle-pass" onclick="togglePass('signup-pass',this)" tabindex="-1">👁</button>
+          <div class="pass-hint">Minimum 8 characters</div>
+        </div>
+        <div class="field pass-field">
+          <label for="signup-pass2">Confirm Password</label>
+          <input type="password" id="signup-pass2" placeholder="Repeat your password" autocomplete="new-password">
+          <button type="button" class="toggle-pass" onclick="togglePass('signup-pass2',this)" tabindex="-1">👁</button>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="signup-terms">
+          <label for="signup-terms">I confirm that I am a registered student or staff member and agree to the acceptable use policy for this platform.</label>
+        </div>
+        <button class="btn btn-primary" id="signup-btn" onclick="handleSignup()">
+          <span id="signup-btn-text">Create Account</span>
+        </button>
+        <div class="link-row">
+          <a href="#" onclick="switchTab('login');return false">Already have an account? Sign in</a>
+        </div>
+      </div>
+
+      <!-- Success state after signup -->
+      <div id="signup-success" style="display:none">
+        <div class="success-box">
+          <div class="success-icon">📬</div>
+          <div class="success-title">Check Your Email</div>
+          <div class="success-msg">
+            Your account has been created. Please follow these steps to complete your access:
+          </div>
+          <div class="steps-list">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div>Open the verification email we just sent you and click the confirmation link.</div>
+            </div>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div>Your account will be reviewed by the administrator. This is usually done within 24 hours.</div>
+            </div>
+            <div class="step">
+              <div class="step-num">3</div>
+              <div>Once approved, return here and sign in with your email and password.</div>
+            </div>
+          </div>
+        </div>
+        <hr class="divider">
+        <button class="btn btn-primary" onclick="switchTab('login')" style="max-width:200px;margin:0 auto">
+          Back to Sign In
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="portal-footer">
+    <span id="footer-text">SCQ Educational Technology Platform</span><br>
+    Questions? Contact <a href="#" id="footer-email">admin@yourdomain.com</a>
+  </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal-backdrop" id="forgot-modal">
+  <div class="modal">
+    <h3>Reset Password</h3>
+    <p>Enter the email address associated with your account. We'll send you a link to set a new password.</p>
+    <div class="alert" id="forgot-alert">
+      <span class="alert-icon" id="forgot-icon"></span>
+      <span id="forgot-msg"></span>
+    </div>
+    <div class="field">
+      <label for="forgot-email">Email Address</label>
+      <input type="email" id="forgot-email" placeholder="you@example.com">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-ghost" onclick="closeForgot()">Cancel</button>
+      <button class="btn btn-primary" id="forgot-btn" onclick="handleForgot()" style="flex:1.5">
+        <span id="forgot-btn-text">Send Reset Link</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+<script>
+// ─── Init branding from config ─────────────────────────────────────────────
+(function () {
+  if (typeof PORTAL_CONFIG !== 'undefined') {
+    document.getElementById('emblem').textContent        = PORTAL_CONFIG.logoInitials   || 'SCQ';
+    document.getElementById('portal-name').textContent   = PORTAL_CONFIG.institutionName || 'Learning Portal';
+    document.getElementById('portal-tagline').textContent= PORTAL_CONFIG.tagline         || '';
+    document.getElementById('footer-text').textContent   = PORTAL_CONFIG.footerText      || '';
+    document.getElementById('footer-email').textContent  = PORTAL_CONFIG.supportEmail    || '';
+    document.getElementById('footer-email').href         = 'mailto:' + (PORTAL_CONFIG.supportEmail || '');
+    document.title = 'Sign In — ' + (PORTAL_CONFIG.institutionName || 'Portal');
+  }
+})();
+
+// ─── Check if already logged in ───────────────────────────────────────────
+(async function () {
+  if (typeof _scqSupabase === 'undefined') return;
+  try {
+    var r = await _scqSupabase.auth.getSession();
+    if (r && r.data && r.data.session) {
+      var uid  = r.data.session.user.id;
+      var prof = await _scqSupabase.from('profiles').select('role,is_active').eq('id', uid).single();
+      if (prof && prof.data && prof.data.is_active) {
+        var base = (typeof AUTH_BASE_URL !== 'undefined') ? AUTH_BASE_URL.replace(/\/$/, '') : '';
+        window.location.href = prof.data.role === 'admin'
+          ? (base ? base + '/admin.html' : 'admin.html')
+          : (base ? base + '/launcher.html' : 'launcher.html');
+      }
+    }
+  } catch (_) {}
+})();
+
+// ─── Reason messages from URL params ──────────────────────────────────────
+(function () {
+  var params  = new URLSearchParams(window.location.search);
+  var reason  = params.get('reason');
+  var verified= params.get('verified');
+  var el      = document.getElementById('reason-alert');
+  var icon    = document.getElementById('reason-icon');
+  var msg     = document.getElementById('reason-msg');
+
+  if (verified === 'true') {
+    el.className  = 'alert success show';
+    icon.textContent= '✅';
+    msg.textContent = 'Email verified! Your account is now pending admin approval. You will receive confirmation once activated.';
+    return;
+  }
+
+  var map = {
+    inactive:          { cls:'warning', ic:'⏳', txt:'Your account is pending admin approval. Please check back later or contact support.' },
+    session_conflict:  { cls:'error',   ic:'🔒', txt:'Your session was terminated because another device signed in with your credentials. Please sign in again.' },
+    logged_out:        { cls:'info',    ic:'👋', txt:'You have been signed out successfully.' },
+    no_profile:        { cls:'error',   ic:'⚠️', txt:'An account error occurred. Please contact support.' },
+    not_logged_in:     { cls:'',        ic:'',   txt:'' },
+  };
+
+  if (reason && map[reason] && map[reason].txt) {
+    var m = map[reason];
+    el.className       = 'alert ' + m.cls + ' show';
+    icon.textContent   = m.ic;
+    msg.textContent    = m.txt;
+  }
+})();
+
+// ─── Tab switcher ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active',  tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('panel-login').classList.toggle('active',  tab === 'login');
+  document.getElementById('panel-signup').classList.toggle('active', tab === 'signup');
+  hideAlert('login-alert');
+  hideAlert('signup-alert');
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+function showAlert(id, type, icon, text) {
+  var el = document.getElementById(id);
+  el.className = 'alert ' + type + ' show';
+  document.getElementById(id + '-icon').textContent = icon;
+  document.getElementById(id + '-msg').textContent  = text;
+}
+function hideAlert(id) {
+  document.getElementById(id).className = 'alert';
+}
+function setLoading(btnId, textId, loading, text) {
+  var btn = document.getElementById(btnId);
+  var lbl = document.getElementById(textId);
+  if (loading) {
+    btn.disabled  = true;
+    btn.innerHTML = '<span class="spinner"></span><span>' + (text || 'Please wait…') + '</span>';
+  } else {
+    btn.disabled     = false;
+    btn.innerHTML    = '<span id="' + textId + '">' + text + '</span>';
+  }
+}
+function togglePass(inputId, btn) {
+  var inp = document.getElementById(inputId);
+  if (inp.type === 'password') { inp.type = 'text';  btn.textContent = '🙈'; }
+  else                         { inp.type = 'password'; btn.textContent = '👁'; }
+}
+
+// ─── LOGIN ─────────────────────────────────────────────────────────────────
+async function handleLogin() {
+  hideAlert('login-alert');
+  var email = document.getElementById('login-email').value.trim();
+  var pass  = document.getElementById('login-pass').value;
+
+  if (!email || !pass) {
+    showAlert('login-alert','error','⚠️','Please enter your email and password.');
+    return;
+  }
+
+  setLoading('login-btn','login-btn-text', true, 'Signing in…');
+
+  try {
+    var sb = _scqSupabase;
+    var { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      var msg = error.message.includes('Invalid login')
+        ? 'Invalid email or password. Please try again.'
+        : error.message.includes('Email not confirmed')
+        ? 'Please verify your email address before signing in.'
+        : error.message;
+      showAlert('login-alert','error','❌', msg);
+      setLoading('login-btn','login-btn-text', false, 'Sign In to Portal');
+      return;
+    }
+
+    var uid     = data.user.id;
+    // Fetch profile
+    var { data: profile } = await sb.from('profiles')
+      .select('role, is_active, device_token')
+      .eq('id', uid).single();
+
+    if (!profile || !profile.is_active) {
+      await sb.auth.signOut();
+      showAlert('login-alert','warning','⏳','Your account is pending admin approval. Please try again later.');
+      setLoading('login-btn','login-btn-text', false, 'Sign In to Portal');
+      return;
+    }
+
+    // Register device (single-device enforcement)
+    await _scqRegisterDevice(uid);
+
+    // Log audit event
+    try {
+      await sb.rpc('log_audit', { p_action: 'login', p_details: { email: email } });
+    } catch (_) {}
+
+    // Redirect
+    var base = (typeof AUTH_BASE_URL !== 'undefined') ? AUTH_BASE_URL.replace(/\/$/, '') : '';
+    window.location.href = profile.role === 'admin'
+      ? (base ? base + '/admin.html' : 'admin.html')
+      : (base ? base + '/launcher.html' : 'launcher.html');
+
+  } catch (e) {
+    showAlert('login-alert','error','⚠️','A network error occurred. Please check your connection.');
+    setLoading('login-btn','login-btn-text', false, 'Sign In to Portal');
+  }
+}
+
+// ─── SIGNUP ────────────────────────────────────────────────────────────────
+async function handleSignup() {
+  hideAlert('signup-alert');
+  var name  = document.getElementById('signup-name').value.trim();
+  var email = document.getElementById('signup-email').value.trim();
+  var pass  = document.getElementById('signup-pass').value;
+  var pass2 = document.getElementById('signup-pass2').value;
+  var terms = document.getElementById('signup-terms').checked;
+
+  if (!name || !email || !pass || !pass2) {
+    showAlert('signup-alert','error','⚠️','Please fill in all fields.');
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showAlert('signup-alert','error','⚠️','Please enter a valid email address.');
+    return;
+  }
+  if (pass.length < 8) {
+    showAlert('signup-alert','error','⚠️','Password must be at least 8 characters.');
+    return;
+  }
+  if (pass !== pass2) {
+    showAlert('signup-alert','error','⚠️','Passwords do not match.');
+    return;
+  }
+  if (!terms) {
+    showAlert('signup-alert','error','⚠️','Please accept the terms to continue.');
+    return;
+  }
+
+  setLoading('signup-btn','signup-btn-text', true, 'Creating account…');
+
+  try {
+    var base = (typeof AUTH_BASE_URL !== 'undefined') ? AUTH_BASE_URL.replace(/\/$/, '') : window.location.origin;
+    var { data, error } = await _scqSupabase.auth.signUp({
+      email,
+      password: pass,
+      options: {
+        data: { full_name: name },
+        emailRedirectTo: base + '/index.html?verified=true'
+      }
+    });
+
+    if (error) {
+      var msg = error.message.includes('already registered')
+        ? 'An account with this email already exists. Try signing in instead.'
+        : error.message;
+      showAlert('signup-alert','error','❌', msg);
+      setLoading('signup-btn','signup-btn-text', false, 'Create Account');
+      return;
+    }
+
+    // Show success state
+    document.getElementById('signup-form').style.display    = 'none';
+    document.getElementById('signup-success').style.display = 'block';
+
+  } catch (e) {
+    showAlert('signup-alert','error','⚠️','A network error occurred. Please try again.');
+    setLoading('signup-btn','signup-btn-text', false, 'Create Account');
+  }
+}
+
+// ─── FORGOT PASSWORD ───────────────────────────────────────────────────────
+function openForgot() {
+  document.getElementById('forgot-email').value = document.getElementById('login-email').value;
+  hideAlert('forgot-alert');
+  document.getElementById('forgot-modal').classList.add('open');
+}
+function closeForgot() {
+  document.getElementById('forgot-modal').classList.remove('open');
+}
+async function handleForgot() {
+  hideAlert('forgot-alert');
+  var email = document.getElementById('forgot-email').value.trim();
+  if (!email) {
+    document.getElementById('forgot-alert').className='alert error show';
+    document.getElementById('forgot-icon').textContent='⚠️';
+    document.getElementById('forgot-msg').textContent='Please enter your email address.';
+    return;
+  }
+
+  var btn = document.getElementById('forgot-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span><span>Sending…</span>';
+
+  var base = (typeof AUTH_BASE_URL !== 'undefined') ? AUTH_BASE_URL.replace(/\/$/, '') : window.location.origin;
+  var { error } = await _scqSupabase.auth.resetPasswordForEmail(email, {
+    redirectTo: base + '/index.html'
+  });
+
+  document.getElementById('forgot-alert').className = 'alert ' + (error ? 'error show' : 'success show');
+  document.getElementById('forgot-icon').textContent = error ? '❌' : '📨';
+  document.getElementById('forgot-msg').textContent  = error
+    ? (error.message || 'Could not send reset email.')
+    : 'Reset link sent! Check your inbox (and spam folder).';
+  btn.disabled  = false;
+  btn.innerHTML = '<span id="forgot-btn-text">Send Reset Link</span>';
+}
+
+// ─── Keyboard: Enter to submit ─────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('panel-login').classList.contains('active')) handleLogin();
+  else handleSignup();
+});
+document.getElementById('forgot-email').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') handleForgot();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — SCQ Learning Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-0:#050911;--bg-1:#0a0f1e;--bg-2:#111827;--bg-3:#1a2236;--bg-4:#1e2d40;
+  --border:#1e3a5f;--border-s:rgba(255,255,255,.05);
+  --accent:#2563eb;--accent-h:#1d4ed8;--accent-dim:rgba(37,99,235,.12);
+  --teal:#0891b2;--teal-dim:rgba(8,145,178,.12);
+  --success:#059669;--success-dim:rgba(5,150,105,.12);
+  --warning:#d97706;--warning-dim:rgba(217,119,6,.12);
+  --danger:#dc2626;--danger-dim:rgba(220,38,38,.12);
+  --t1:#f1f5f9;--t2:#94a3b8;--t3:#475569;
+  --r:8px;--r-lg:12px;--shadow:0 4px 24px rgba(0,0,0,.5);
+  --sidebar:256px;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'Cascadia Code','Fira Code',monospace
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg-0);color:var(--t1);font-size:14px}
+#page-loader{position:fixed;inset:0;background:var(--bg-0);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:9999;gap:14px}
+.ld-ring{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:#fff}
+.ld-bar{width:120px;height:3px;background:var(--bg-3);border-radius:2px;overflow:hidden}
+.ld-bar::after{content:'';display:block;height:100%;width:35%;background:var(--accent);
+  animation:barslide 1s ease-in-out infinite}
+@keyframes barslide{0%{transform:translateX(-100%)}100%{transform:translateX(380%)}}
+.ld-text{font-size:.7rem;color:var(--t3);letter-spacing:.08em;text-transform:uppercase}
+.layout{display:flex;height:100vh;overflow:hidden}
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar);flex-shrink:0;background:var(--bg-1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;transition:transform .25s}
+.sb-hdr{padding:18px 14px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-brand{display:flex;align-items:center;gap:10px}
+.sb-orb{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;color:#fff;flex-shrink:0}
+.sb-ttl{font-size:.88rem;font-weight:700;color:var(--t1)}
+.sb-sub{font-size:.65rem;color:var(--t3);text-transform:uppercase;letter-spacing:.07em}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 8px}
+.nav-sec{font-size:.63rem;color:var(--t3);font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:10px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:var(--r);cursor:pointer;
+  color:var(--t2);font-size:.83rem;font-weight:500;margin-bottom:2px;transition:all .14s;
+  border:none;background:transparent;width:100%;text-align:left;font-family:var(--font)}
+.nav-item:hover{background:var(--bg-3);color:var(--t1)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.nav-item .ni{font-size:.95rem;flex-shrink:0;width:20px;text-align:center}
+.nav-badge{margin-left:auto;min-width:18px;height:18px;border-radius:9px;padding:0 5px;
+  background:var(--danger);color:#fff;font-size:.62rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
+.sb-ftr{padding:10px 8px;border-top:1px solid var(--border);flex-shrink:0}
+.sb-who{display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:6px}
+.sb-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:#fff;flex-shrink:0}
+.sb-wname{font-size:.78rem;color:var(--t1);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-wrole{font-size:.63rem;color:var(--success);font-weight:600}
+.btn-lo{display:flex;align-items:center;gap:6px;width:100%;padding:7px 10px;background:transparent;
+  border:1px solid var(--border);border-radius:var(--r);color:var(--t2);font-size:.78rem;
+  font-family:var(--font);cursor:pointer;transition:all .14s}
+.btn-lo:hover{border-color:var(--danger);color:#fca5a5}
+/* ── MAIN ── */
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;flex-shrink:0;background:var(--bg-1);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 22px;gap:14px}
+.menu-tog{display:none;background:none;border:none;color:var(--t2);cursor:pointer;font-size:1.2rem;padding:4px}
+.tb-title{font-size:.93rem;font-weight:700;color:var(--t1)}
+.tb-sub{font-size:.72rem;color:var(--t3)}
+.tb-space{flex:1}
+.btn-ref{background:transparent;border:1px solid var(--border);border-radius:var(--r);color:var(--t2);
+  padding:5px 10px;font-size:.76rem;cursor:pointer;font-family:var(--font);transition:all .14s;
+  display:flex;align-items:center;gap:5px}
+.btn-ref:hover{border-color:var(--accent);color:var(--accent)}
+.content{flex:1;overflow-y:auto;padding:22px}
+.panel{display:none}.panel.active{display:block}
+/* ── STATS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:26px}
+.stat-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:18px;border-left:3px solid}
+.stat-lbl{font-size:.68rem;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:7px}
+.stat-val{font-size:1.9rem;font-weight:800;color:var(--t1);line-height:1}
+.stat-hint{font-size:.72rem;color:var(--t2);margin-top:5px}
+.c-blue{border-color:var(--accent)}.c-green{border-color:var(--success)}
+.c-yellow{border-color:var(--warning)}.c-teal{border-color:var(--teal)}.c-red{border-color:var(--danger)}
+/* ── TOOLBAR ── */
+.toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.sbox{display:flex;align-items:center;gap:8px;background:var(--bg-3);border:1px solid var(--border);
+  border-radius:var(--r);padding:7px 12px;flex:1;min-width:180px;max-width:340px}
+.sbox input{background:transparent;border:none;outline:none;color:var(--t1);font-size:.83rem;
+  font-family:var(--font);width:100%}
+.sbox input::placeholder{color:var(--t3)}
+.ftabs{display:flex;gap:4px;flex-wrap:wrap}
+.ftab{padding:5px 11px;border-radius:20px;font-size:.73rem;font-weight:600;cursor:pointer;
+  background:transparent;border:1px solid var(--border);color:var(--t3);font-family:var(--font);transition:all .14s}
+.ftab:hover{border-color:var(--t2);color:var(--t2)}
+.ftab.on{background:var(--accent-dim);border-color:rgba(37,99,235,.4);color:var(--accent)}
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border:none;border-radius:var(--r);
+  font-size:.79rem;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .14s;white-space:nowrap}
+.btn-sm{padding:5px 9px;font-size:.73rem}
+.b-pri{background:var(--accent);color:#fff}.b-pri:hover{background:var(--accent-h)}
+.b-suc{background:var(--success);color:#fff}.b-suc:hover{background:#047857}
+.b-dan{background:transparent;border:1px solid rgba(220,38,38,.4);color:#fca5a5}
+.b-dan:hover{background:var(--danger-dim)}
+.b-gh{background:transparent;border:1px solid var(--border);color:var(--t2)}
+.b-gh:hover{border-color:var(--t2);color:var(--t1)}
+.b-warn{background:transparent;border:1px solid rgba(217,119,6,.4);color:#fcd34d}
+.b-warn:hover{background:var(--warning-dim)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.spin{width:12px;height:12px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+  border-radius:50%;animation:barslide .55s linear infinite;flex-shrink:0}
+/* ── TABLE ── */
+.twrap{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;overflow-x:auto}
+.dt{width:100%;border-collapse:collapse;min-width:600px}
+.dt th{padding:9px 13px;text-align:left;font-size:.67rem;font-weight:700;color:var(--t3);
+  text-transform:uppercase;letter-spacing:.07em;background:var(--bg-3);border-bottom:1px solid var(--border);white-space:nowrap}
+.dt td{padding:11px 13px;border-bottom:1px solid var(--border-s);vertical-align:middle;font-size:.82rem}
+.dt tr:last-child td{border-bottom:none}
+.dt tr:hover td{background:rgba(255,255,255,.014)}
+/* ── USER ROW ── */
+.uc{display:flex;align-items:center;gap:9px}
+.uav{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0}
+.uname{font-weight:600;color:var(--t1);font-size:.83rem;white-space:nowrap}
+.uemail{font-size:.73rem;color:var(--t2)}
+/* ── BADGES ── */
+.bdg{display:inline-flex;align-items:center;gap:3px;font-size:.67rem;font-weight:700;
+  padding:2px 7px;border-radius:9px;letter-spacing:.04em}
+.bdg-on{background:var(--success-dim);color:#34d399;border:1px solid rgba(5,150,105,.3)}
+.bdg-off{background:var(--warning-dim);color:#fcd34d;border:1px solid rgba(217,119,6,.3)}
+.bdg-plan{background:var(--accent-dim);color:#93c5fd;border:1px solid rgba(37,99,235,.3)}
+.bdg-adm{background:var(--teal-dim);color:#67e8f9;border:1px solid rgba(8,145,178,.3)}
+.bdg-en{background:var(--success-dim);color:#34d399;border:1px solid rgba(5,150,105,.3)}
+.bdg-dis{background:var(--danger-dim);color:#fca5a5;border:1px solid rgba(220,38,38,.3)}
+/* ── INLINE SELECT ── */
+.isel{background:var(--bg-3);border:1px solid var(--border);border-radius:var(--r);
+  color:var(--t1);font-size:.77rem;padding:4px 7px;font-family:var(--font);cursor:pointer;max-width:130px}
+.isel:focus{outline:none;border-color:var(--accent)}
+/* ── ACT BUTTONS ── */
+.acts{display:flex;gap:4px;align-items:center}
+.ab{width:27px;height:27px;border-radius:6px;border:1px solid var(--border);background:transparent;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.83rem;
+  transition:all .14s;color:var(--t2)}
+.ab:hover{background:var(--bg-3);color:var(--t1)}
+.ab.dan:hover{border-color:var(--danger);background:var(--danger-dim);color:#fca5a5}
+.ab.suc:hover{border-color:var(--success);background:var(--success-dim);color:#34d399}
+.ab.warn:hover{border-color:var(--warning);background:var(--warning-dim);color:#fcd34d}
+/* ── PLAN CARDS ── */
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.plan-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:18px;display:flex;flex-direction:column;gap:10px}
+.pc-name{font-size:.97rem;font-weight:700;color:var(--t1)}
+.pc-desc{font-size:.79rem;color:var(--t2);line-height:1.5;flex:1}
+.pc-meta{display:flex;gap:14px}
+.pc-stat{font-size:.73rem;color:var(--t3)}.pc-stat strong{color:var(--t2)}
+.pc-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+/* ── APP TABLE ── */
+.slug{font-family:var(--mono);font-size:.71rem;background:var(--bg-3);padding:2px 7px;
+  border-radius:4px;color:#67e8f9;border:1px solid var(--border)}
+.aurl{font-size:.73rem;color:var(--teal);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+/* ── TOGGLE ── */
+.tog{position:relative;display:inline-block;width:34px;height:19px}
+.tog input{opacity:0;width:0;height:0}
+.tslider{position:absolute;inset:0;background:var(--bg-4);border-radius:19px;cursor:pointer;
+  transition:.18s;border:1px solid var(--border)}
+.tslider::before{content:'';position:absolute;height:13px;width:13px;left:2px;bottom:2px;
+  background:var(--t3);border-radius:50%;transition:.18s}
+.tog input:checked+.tslider{background:var(--success);border-color:var(--success)}
+.tog input:checked+.tslider::before{transform:translateX(15px);background:#fff}
+/* ── SEC HEAD ── */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-ttl{font-size:.88rem;font-weight:700;color:var(--t1)}
+/* ── MODAL ── */
+.mbd{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;
+  align-items:center;justify-content:center;padding:16px}
+.mbd.open{display:flex}
+.modal{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  width:100%;padding:26px;box-shadow:var(--shadow);max-height:90vh;overflow-y:auto;position:relative}
+.m-sm{max-width:420px}.m-md{max-width:540px}.m-lg{max-width:660px}
+.m-title{font-size:.97rem;font-weight:700;margin-bottom:4px;color:var(--t1)}
+.m-sub{font-size:.78rem;color:var(--t2);margin-bottom:20px;line-height:1.5}
+.m-x{position:absolute;top:14px;right:14px;background:transparent;border:none;color:var(--t3);
+  cursor:pointer;font-size:1.1rem;width:26px;height:26px;display:flex;align-items:center;
+  justify-content:center;border-radius:6px;transition:all .14s}
+.m-x:hover{background:var(--bg-3);color:var(--t1)}
+.m-foot{display:flex;gap:9px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
+/* ── FORM ── */
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:.7rem;font-weight:700;color:var(--t2);
+  margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.fld input,.fld textarea,.fld select{width:100%;padding:8px 11px;background:var(--bg-3);
+  border:1px solid var(--border);border-radius:var(--r);color:var(--t1);font-size:.83rem;
+  font-family:var(--font);outline:none;transition:border-color .14s}
+.fld textarea{resize:vertical;min-height:76px}
+.fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--accent)}
+.fld input::placeholder,.fld textarea::placeholder{color:var(--t3)}
+.fhint{font-size:.7rem;color:var(--t3);margin-top:4px}
+.ferr{font-size:.7rem;color:#fca5a5;margin-top:4px;display:none}
+.fld.inv input,.fld.inv textarea{border-color:var(--danger)}
+.fld.inv .ferr{display:block}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* ── APP CHECK LIST ── */
+.acl{max-height:310px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r)}
+.aci{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid var(--border-s);transition:background .11s}
+.aci:last-child{border-bottom:none}
+.aci:hover{background:var(--bg-3)}
+.aci input[type=checkbox]{accent-color:var(--accent);cursor:pointer;flex-shrink:0}
+.aci-ico{font-size:1.05rem;flex-shrink:0}
+.aci-nm{font-size:.83rem;font-weight:600;color:var(--t1)}
+.aci-sl{font-size:.69rem;font-family:var(--mono);color:var(--t3)}
+/* ── AUDIT ── */
+.log-act{font-family:var(--mono);font-size:.7rem;background:var(--bg-3);padding:2px 7px;
+  border-radius:4px;color:#93c5fd}
+.log-ts{font-size:.72rem;color:var(--t3);white-space:nowrap}
+.log-det{font-size:.73rem;color:var(--t2);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ── EMPTY ── */
+.erow td{text-align:center;padding:30px;color:var(--t3);font-size:.82rem}
+/* ── TOAST ── */
+#toast-wrap{position:fixed;bottom:22px;right:22px;z-index:500;display:flex;flex-direction:column;gap:9px;pointer-events:none}
+.toast{display:flex;align-items:center;gap:9px;padding:11px 14px;background:var(--bg-2);
+  border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow);
+  pointer-events:all;animation:tin .22s ease;min-width:260px;max-width:360px;font-size:.81rem}
+.toast.out{animation:tout .22s ease forwards}
+@keyframes tin{from{opacity:0;transform:translateX(36px)}to{opacity:1;transform:none}}
+@keyframes tout{from{opacity:1}to{opacity:0;transform:translateX(36px)}}
+.ticon{font-size:1rem;flex-shrink:0}
+.tmsg{flex:1;color:var(--t1);line-height:1.4}
+.tx{background:none;border:none;color:var(--t3);cursor:pointer;font-size:.85rem;padding:2px}
+.tx:hover{color:var(--t1)}
+.toast.suc{border-color:rgba(5,150,105,.4)}
+.toast.err{border-color:rgba(220,38,38,.4)}
+/* ── PAGER ── */
+.pager{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:14px}
+.pgr{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;
+  color:var(--t2);cursor:pointer;font-size:.79rem;display:flex;align-items:center;justify-content:center;transition:all .14s}
+.pgr:hover{border-color:var(--accent);color:var(--accent)}
+.pgr.cur{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);font-weight:700}
+.pgr-inf{font-size:.73rem;color:var(--t3);padding:0 8px}
+/* ── CONFIRM ── */
+.conf-msg{font-size:.85rem;color:var(--t2);line-height:1.6;margin-bottom:6px}
+.conf-name{font-size:.93rem;font-weight:700;color:var(--t1);margin-bottom:14px}
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:256px;z-index:150;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .overlay{display:block!important}
+  .menu-tog{display:block}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .r2{grid-template-columns:1fr}
+}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140}
+</style>
+</head>
+<body>
+<div id="page-loader">
+  <div class="ld-ring" id="ld-emblem">SCQ</div>
+  <div class="ld-bar"></div>
+  <div class="ld-text">Loading admin panel…</div>
+</div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="layout" id="layout" style="visibility:hidden">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-hdr">
+      <div class="sb-brand">
+        <div class="sb-orb" id="sb-orb">SCQ</div>
+        <div><div class="sb-ttl" id="sb-ttl">SCQ Portal</div><div class="sb-sub">Admin Console</div></div>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-sec">Overview</div>
+      <button class="nav-item active" onclick="showPanel('overview')"><span class="ni">🏠</span>Dashboard</button>
+      <hr class="ndiv">
+      <div class="nav-sec">Management</div>
+      <button class="nav-item" id="nav-users" onclick="showPanel('users')">
+        <span class="ni">👥</span>Users<span class="nav-badge" id="pending-badge" style="display:none">0</span>
+      </button>
+      <button class="nav-item" onclick="showPanel('plans')"><span class="ni">📦</span>Plans</button>
+      <button class="nav-item" onclick="showPanel('apps')"><span class="ni">🗂️</span>Applications</button>
+      <hr class="ndiv">
+      <div class="nav-sec">System</div>
+      <button class="nav-item" onclick="showPanel('audit')"><span class="ni">📋</span>Audit Log</button>
+    </nav>
+    <div class="sb-ftr">
+      <div class="sb-who">
+        <div class="sb-av" id="sb-av">A</div>
+        <div><div class="sb-wname" id="sb-wname">Admin</div><div class="sb-wrole">● Administrator</div></div>
+      </div>
+      <button class="btn-lo" onclick="scqLogout()"><span>⏻</span>Sign Out</button>
+    </div>
+  </aside>
+  <!-- MAIN -->
+  <div class="main-area">
+    <div class="topbar">
+      <button class="menu-tog" onclick="toggleSidebar()">☰</button>
+      <div><div class="tb-title" id="tb-title">Dashboard</div><div class="tb-sub" id="tb-sub">System overview</div></div>
+      <div class="tb-space"></div>
+      <button class="btn-ref" onclick="refreshCurrent()">↻ Refresh</button>
+    </div>
+    <div class="content" id="content">
+      <!-- OVERVIEW -->
+      <div class="panel active" id="panel-overview">
+        <div class="stat-grid">
+          <div class="stat-card c-blue"><div class="stat-lbl">Total Users</div><div class="stat-val" id="s-total">—</div><div class="stat-hint">Registered accounts</div></div>
+          <div class="stat-card c-green"><div class="stat-lbl">Active Users</div><div class="stat-val" id="s-active">—</div><div class="stat-hint" id="s-active-pct"></div></div>
+          <div class="stat-card c-yellow"><div class="stat-lbl">Pending Approval</div><div class="stat-val" id="s-pending">—</div><div class="stat-hint">Awaiting activation</div></div>
+          <div class="stat-card c-teal"><div class="stat-lbl">Applications</div><div class="stat-val" id="s-apps">—</div><div class="stat-hint" id="s-apps-h"></div></div>
+          <div class="stat-card c-blue"><div class="stat-lbl">Plans</div><div class="stat-val" id="s-plans">—</div><div class="stat-hint">Subscription tiers</div></div>
+          <div class="stat-card c-teal"><div class="stat-lbl">Active Sessions</div><div class="stat-val" id="s-sess">—</div><div class="stat-hint">Devices registered</div></div>
+        </div>
+        <div class="sec-hd"><div class="sec-ttl">Recent Activity</div><button class="btn b-gh btn-sm" onclick="showPanel('audit')">View All →</button></div>
+        <div class="twrap"><table class="dt"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead><tbody id="recent-log"></tbody></table></div>
+      </div>
+      <!-- USERS -->
+      <div class="panel" id="panel-users">
+        <div class="toolbar">
+          <div class="sbox"><span style="color:var(--t3)">🔍</span><input type="text" id="user-q" placeholder="Search name or email…" oninput="filterUsers()"></div>
+          <div class="ftabs">
+            <button class="ftab on" onclick="setUF('all',this)">All</button>
+            <button class="ftab" onclick="setUF('active',this)">Active</button>
+            <button class="ftab" onclick="setUF('pending',this)">Pending</button>
+            <button class="ftab" onclick="setUF('noplan',this)">No Plan</button>
+          </div>
+          <button class="btn b-gh btn-sm" onclick="exportCSV()" style="margin-left:auto">⬇ Export CSV</button>
+        </div>
+        <div class="twrap"><table class="dt"><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Session</th><th>Joined</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="utbl"></tbody></table></div>
+        <div id="upager" class="pager"></div>
+      </div>
+      <!-- PLANS -->
+      <div class="panel" id="panel-plans">
+        <div class="sec-hd"><div class="sec-ttl">Subscription Plans</div><button class="btn b-pri btn-sm" onclick="openPlanModal(null)">+ New Plan</button></div>
+        <div class="plan-grid" id="plan-grid"></div>
+      </div>
+      <!-- APPS -->
+      <div class="panel" id="panel-apps">
+        <div class="sec-hd"><div class="sec-ttl">Application Registry</div><button class="btn b-pri btn-sm" onclick="openAppModal(null)">+ Register App</button></div>
+        <div class="twrap"><table class="dt"><thead><tr><th>App</th><th>Slug</th><th>URL</th><th>Plans</th><th>Status</th><th>Actions</th></tr></thead><tbody id="atbl"></tbody></table></div>
+      </div>
+      <!-- AUDIT -->
+      <div class="panel" id="panel-audit">
+        <div class="toolbar">
+          <div class="sbox"><span style="color:var(--t3)">🔍</span><input type="text" id="log-q" placeholder="Filter by action or user…" oninput="filterLog()"></div>
+          <button class="btn b-gh btn-sm" onclick="loadAudit()">↻ Refresh</button>
+        </div>
+        <div class="twrap"><table class="dt"><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody id="logtbl"></tbody></table></div>
+        <div id="logpager" class="pager"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- MODAL: Plan -->
+<div class="mbd" id="m-plan">
+  <div class="modal m-md">
+    <button class="m-x" onclick="closeM('m-plan')">✕</button>
+    <div class="m-title" id="pm-title">New Plan</div>
+    <div class="m-sub">Define a subscription tier.</div>
+    <div class="fld" id="pn-fld"><label>Plan Name *</label><input type="text" id="pm-name" placeholder="e.g. Student, Teacher"><div class="ferr">Name is required.</div></div>
+    <div class="fld"><label>Description</label><textarea id="pm-desc" placeholder="What this plan includes…"></textarea></div>
+    <div class="fld" style="display:flex;align-items:center;gap:10px">
+      <label class="tog"><input type="checkbox" id="pm-active" checked><span class="tslider"></span></label>
+      <span style="font-size:.82rem;color:var(--t2)">Plan is active</span>
+    </div>
+    <div class="m-foot"><button class="btn b-gh" onclick="closeM('m-plan')">Cancel</button><button class="btn b-pri" id="pm-save" onclick="savePlan()">Save Plan</button></div>
+  </div>
+</div>
+<!-- MODAL: Plan Apps -->
+<div class="mbd" id="m-paApps">
+  <div class="modal m-md">
+    <button class="m-x" onclick="closeM('m-paApps')">✕</button>
+    <div class="m-title" id="pam-title">Manage Apps</div>
+    <div class="m-sub">Select which applications are included in this plan.</div>
+    <div class="acl" id="acl"><div style="text-align:center;padding:20px;color:var(--t3)">Loading…</div></div>
+    <div class="m-foot"><button class="btn b-gh" onclick="closeM('m-paApps')">Cancel</button><button class="btn b-pri" id="pam-save" onclick="savePlanApps()">Save Changes</button></div>
+  </div>
+</div>
+<!-- MODAL: App -->
+<div class="mbd" id="m-app">
+  <div class="modal m-md">
+    <button class="m-x" onclick="closeM('m-app')">✕</button>
+    <div class="m-title" id="am-title">Register Application</div>
+    <div class="m-sub">Add a new app to the access control registry.</div>
+    <div class="r2">
+      <div class="fld" id="an-fld"><label>App Name *</label><input type="text" id="am-name" placeholder="e.g. Chemistry MCQ"><div class="ferr">Name is required.</div></div>
+      <div class="fld" id="as-fld"><label>Slug *</label><input type="text" id="am-slug" placeholder="e.g. chemistry-mcq" oninput="slugify()"><div class="ferr" id="as-err">Slug required (a–z, 0–9, -).</div></div>
+    </div>
+    <div class="fld"><label>App URL</label><input type="text" id="am-url" placeholder="https://yourdomain.github.io/app.html"></div>
+    <div class="fld"><label>Description</label><textarea id="am-desc" placeholder="Brief description of this app…"></textarea></div>
+    <div class="r2">
+      <div class="fld"><label>Icon (emoji)</label><input type="text" id="am-icon" placeholder="🔬" maxlength="4"></div>
+      <div class="fld"><label>Sort Order</label><input type="number" id="am-sort" placeholder="0" min="0"></div>
+    </div>
+    <div class="fld" style="display:flex;align-items:center;gap:10px">
+      <label class="tog"><input type="checkbox" id="am-active" checked><span class="tslider"></span></label>
+      <span style="font-size:.82rem;color:var(--t2)">App is active</span>
+    </div>
+    <div class="m-foot"><button class="btn b-gh" onclick="closeM('m-app')">Cancel</button><button class="btn b-pri" id="am-save" onclick="saveApp()">Save App</button></div>
+  </div>
+</div>
+<!-- MODAL: Notes -->
+<div class="mbd" id="m-notes">
+  <div class="modal m-sm">
+    <button class="m-x" onclick="closeM('m-notes')">✕</button>
+    <div class="m-title">Admin Notes</div>
+    <div class="m-sub" id="notes-sub">Internal notes about this user (not visible to the user).</div>
+    <div class="fld"><label>Notes</label><textarea id="nm-text" placeholder="e.g. paid via bank transfer, expires 2025-12-31…" style="min-height:120px"></textarea></div>
+    <div class="m-foot"><button class="btn b-gh" onclick="closeM('m-notes')">Cancel</button><button class="btn b-pri" onclick="saveNotes()">Save Notes</button></div>
+  </div>
+</div>
+<!-- MODAL: Confirm -->
+<div class="mbd" id="m-confirm">
+  <div class="modal m-sm">
+    <button class="m-x" onclick="closeM('m-confirm')">✕</button>
+    <div class="m-title" id="conf-title">Confirm Action</div>
+    <div class="conf-msg" id="conf-msg"></div>
+    <div class="conf-name" id="conf-name"></div>
+    <div class="m-foot">
+      <button class="btn b-gh" onclick="closeM('m-confirm')">Cancel</button>
+      <button class="btn b-dan" id="conf-ok" onclick="runConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+<div id="toast-wrap"></div>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+var sb, adminProfile;
+var allUsers=[], filteredUsers=[], userFilter='all', userPage=1, userPPG=20;
+var allApps=[], allPlans=[];
+var allLogs=[], filteredLogs=[], logPage=1, logPPG=40;
+var editPlanId=null, editAppId=null, planAppsTargetId=null;
+var notesTargetId=null, confirmFn=null;
+var currentPanel='overview';
+
+// ═══════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════
+(async function boot() {
+  if(typeof PORTAL_CONFIG!=='undefined'){
+    document.title='Admin — '+PORTAL_CONFIG.institutionName;
+    document.getElementById('sb-orb').textContent=PORTAL_CONFIG.logoInitials||'SCQ';
+    document.getElementById('sb-ttl').textContent=PORTAL_CONFIG.institutionName||'Portal';
+    document.getElementById('ld-emblem').textContent=PORTAL_CONFIG.logoInitials||'SCQ';
+  }
+  sb=_scqSupabase;
+  var auth=await requireAuth();
+  if(!auth)return;
+  if(auth.profile.role!=='admin'){
+    var base=(typeof AUTH_BASE_URL!=='undefined')?AUTH_BASE_URL.replace(/\/$/,''):'';
+    window.location.href=base?base+'/launcher.html':'launcher.html';
+    return;
+  }
+  adminProfile=auth.profile;
+  var name=adminProfile.full_name||adminProfile.email.split('@')[0];
+  var ini=name.split(' ').map(function(n){return n[0]}).join('').toUpperCase().substring(0,2);
+  document.getElementById('sb-av').textContent=ini;
+  document.getElementById('sb-wname').textContent=name;
+  document.getElementById('page-loader').remove();
+  document.getElementById('layout').style.visibility='visible';
+  await Promise.all([loadStats(),loadRecentLog(),loadAllPlans(),loadAllApps()]);
+  await loadUsers();
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// PANEL NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+var panelMeta={
+  overview:{title:'Dashboard',sub:'System overview'},
+  users:   {title:'Users',    sub:'Manage user accounts and access'},
+  plans:   {title:'Plans',    sub:'Manage subscription tiers'},
+  apps:    {title:'Applications',sub:'Manage the app registry'},
+  audit:   {title:'Audit Log',sub:'All admin and auth events'}
+};
+function showPanel(id){
+  currentPanel=id;
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('panel-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
+  var nb=document.querySelector('[onclick="showPanel(\''+id+'\')"]');
+  if(nb)nb.classList.add('active');
+  var m=panelMeta[id]||{title:id,sub:''};
+  document.getElementById('tb-title').textContent=m.title;
+  document.getElementById('tb-sub').textContent=m.sub;
+  closeSidebar();
+  if(id==='users')   loadUsers();
+  if(id==='plans')   renderPlans();
+  if(id==='apps')    renderApps();
+  if(id==='audit')   loadAudit();
+  if(id==='overview')Promise.all([loadStats(),loadRecentLog()]);
+}
+function refreshCurrent(){showPanel(currentPanel)}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open')}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open')}
+
+// ═══════════════════════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════════════════════
+async function loadStats(){
+  try{
+    var r=await sb.rpc('admin_get_stats');
+    if(r.error)return;
+    var d=r.data;
+    document.getElementById('s-total').textContent=d.total_users;
+    document.getElementById('s-active').textContent=d.active_users;
+    var pct=d.total_users>0?Math.round(d.active_users/d.total_users*100):0;
+    document.getElementById('s-active-pct').textContent=pct+'% of total';
+    document.getElementById('s-pending').textContent=d.pending_users;
+    document.getElementById('s-apps').textContent=d.total_apps;
+    document.getElementById('s-apps-h').textContent=d.active_apps+' active';
+    document.getElementById('s-plans').textContent=d.total_plans;
+    document.getElementById('s-sess').textContent=d.active_sessions;
+    var pb=document.getElementById('pending-badge');
+    if(d.pending_users>0){pb.textContent=d.pending_users;pb.style.display='flex'}
+    else{pb.style.display='none'}
+  }catch(e){console.warn('Stats error',e)}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECENT LOG (overview)
+// ═══════════════════════════════════════════════════════════════════
+async function loadRecentLog(){
+  try{
+    var r=await sb.rpc('admin_get_recent_audit',{p_limit:8});
+    var tbody=document.getElementById('recent-log');
+    if(r.error||!r.data||!r.data.length){tbody.innerHTML='<tr class="erow"><td colspan="4">No recent activity.</td></tr>';return}
+    tbody.innerHTML=r.data.map(function(l){
+      return '<tr><td class="log-ts">'+fmtDt(l.created_at)+'</td><td style="font-size:.81rem;color:var(--t2)">'+esc(l.actor_email||'—')+'</td><td><span class="log-act">'+esc(l.action)+'</span></td><td style="font-size:.81rem;color:var(--t2)">'+esc(l.target_user_email||'—')+'</td></tr>';
+    }).join('');
+  }catch(e){console.warn(e)}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// USERS
+// ═══════════════════════════════════════════════════════════════════
+async function loadUsers(){
+  try{
+    var r=await sb.rpc('admin_get_users');
+    if(r.error)throw r.error;
+    allUsers=r.data||[];
+    filterUsers();
+  }catch(e){toast('Failed to load users: '+e.message,'err')}
+}
+function setUF(f,btn){
+  userFilter=f;userPage=1;
+  document.querySelectorAll('.ftab').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');
+  filterUsers();
+}
+function filterUsers(){
+  var q=(document.getElementById('user-q').value||'').toLowerCase();
+  filteredUsers=allUsers.filter(function(u){
+    if(u.role==='admin')return false; // admins shown separately
+    var matchQ=!q||(u.email||'').toLowerCase().includes(q)||(u.full_name||'').toLowerCase().includes(q);
+    var matchF=true;
+    if(userFilter==='active')matchF=u.is_active;
+    else if(userFilter==='pending')matchF=!u.is_active;
+    else if(userFilter==='noplan')matchF=!u.plan_id;
+    return matchQ&&matchF;
+  });
+  userPage=1;
+  renderUsersPage();
+}
+function renderUsersPage(){
+  var start=(userPage-1)*userPPG;
+  var slice=filteredUsers.slice(start,start+userPPG);
+  var tbody=document.getElementById('utbl');
+  if(!slice.length){tbody.innerHTML='<tr class="erow"><td colspan="7">No users found.</td></tr>';renderUserPager();return}
+  tbody.innerHTML=slice.map(function(u){
+    var ini=(u.full_name||u.email||'?').split(' ').map(function(n){return n[0]}).join('').toUpperCase().substring(0,2);
+    var planOpts='<option value="">— No plan —</option>'+allPlans.map(function(p){return'<option value="'+p.id+'"'+(u.plan_id===p.id?' selected':'')+'>'+esc(p.name)+'</option>'}).join('');
+    var sess=u.device_token?'<span class="bdg bdg-en">● Active</span>':'<span style="font-size:.72rem;color:var(--t3)">None</span>';
+    var notes=u.notes?('<span style="font-size:.75rem;color:var(--t2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block" title="'+esc(u.notes)+'">'+esc(u.notes.substring(0,40))+'</span>'):'<span style="color:var(--t3);font-size:.75rem">—</span>';
+    return '<tr data-uid="'+u.id+'"><td><div class="uc"><div class="uav">'+esc(ini)+'</div><div><div class="uname">'+esc(u.full_name||'(no name)')+'</div><div class="uemail">'+esc(u.email)+'</div></div></div></td>'
+      +'<td><select class="isel" onchange="setUserPlan(\''+u.id+'\',this.value)">'+planOpts+'</select></td>'
+      +'<td>'+(u.is_active?'<span class="bdg bdg-on">✓ Active</span>':'<span class="bdg bdg-off">⏳ Pending</span>')+'</td>'
+      +'<td>'+sess+'</td>'
+      +'<td>'+(u.created_at?fmtDate(u.created_at):'—')+'</td>'
+      +'<td>'+notes+'</td>'
+      +'<td><div class="acts">'
+      +(u.is_active
+        ?'<button class="ab warn" title="Deactivate" onclick="toggleActive(\''+u.id+'\',false,\''+esc(u.email)+'\')">⏸</button>'
+        :'<button class="ab suc" title="Activate" onclick="toggleActive(\''+u.id+'\',true,\''+esc(u.email)+'\')">▶</button>')
+      +'<button class="ab" title="Edit notes" onclick="openNotes(\''+u.id+'\',\''+esc(u.notes||'')+'\',\''+esc(u.email)+'\')">📝</button>'
+      +'<button class="ab warn" title="Revoke session (force re-login)" onclick="revokeSession(\''+u.id+'\',\''+esc(u.email)+'\')">🔒</button>'
+      +(adminProfile&&adminProfile.id!==u.id?'<button class="ab dan" title="Delete user" onclick="confirmDelete(\''+u.id+'\',\''+esc(u.email)+'\')">🗑</button>':'')
+      +'</div></td></tr>';
+  }).join('');
+  renderUserPager();
+}
+function renderUserPager(){
+  var total=Math.ceil(filteredUsers.length/userPPG);
+  var el=document.getElementById('upager');
+  if(total<=1){el.innerHTML='';return}
+  var html='<span class="pgr-inf">Page '+userPage+' / '+total+'</span>';
+  if(userPage>1)html='<button class="pgr" onclick="goUPage('+(userPage-1)+')">‹</button>'+html;
+  if(userPage<total)html+=('<button class="pgr" onclick="goUPage('+(userPage+1)+')">›</button>');
+  el.innerHTML=html;
+}
+function goUPage(p){userPage=p;renderUsersPage()}
+
+async function setUserPlan(uid,planId){
+  try{
+    if(planId===''){await sb.rpc('admin_update_user',{p_target_id:uid,p_field:'clear_plan'})}
+    else{await sb.rpc('admin_update_user',{p_target_id:uid,p_field:'plan_id',p_value:planId})}
+    var u=allUsers.find(function(x){return x.id===uid});
+    var email=u?u.email:'';
+    await sb.rpc('log_audit',{p_action:'set_plan',p_details:{plan_id:planId},p_target_user_id:uid,p_target_user_email:email});
+    var idx=allUsers.findIndex(function(x){return x.id===uid});
+    if(idx>-1)allUsers[idx].plan_id=planId||null;
+    toast('Plan updated','suc');
+    loadStats();
+  }catch(e){toast('Error: '+e.message,'err')}
+}
+async function toggleActive(uid,active,email){
+  try{
+    await sb.rpc('admin_update_user',{p_target_id:uid,p_field:'is_active',p_value:String(active)});
+    await sb.rpc('log_audit',{p_action:active?'activate':'deactivate',p_details:{},p_target_user_id:uid,p_target_user_email:email});
+    var idx=allUsers.findIndex(function(x){return x.id===uid});
+    if(idx>-1)allUsers[idx].is_active=active;
+    toast(active?'User activated':'User deactivated','suc');
+    filterUsers();loadStats();
+  }catch(e){toast('Error: '+e.message,'err')}
+}
+async function revokeSession(uid,email){
+  try{
+    await sb.rpc('admin_revoke_session',{p_target_id:uid});
+    await sb.rpc('log_audit',{p_action:'revoke_session',p_details:{},p_target_user_id:uid,p_target_user_email:email});
+    var idx=allUsers.findIndex(function(x){return x.id===uid});
+    if(idx>-1){allUsers[idx].device_token=null}
+    toast('Session revoked — user will be forced to re-login','suc');
+    filterUsers();loadStats();
+  }catch(e){toast('Error: '+e.message,'err')}
+}
+function openNotes(uid,notes,email){
+  notesTargetId={uid:uid,email:email};
+  document.getElementById('nm-text').value=notes;
+  document.getElementById('notes-sub').textContent='Notes for: '+email;
+  openM('m-notes');
+}
+async function saveNotes(){
+  if(!notesTargetId)return;
+  var txt=document.getElementById('nm-text').value;
+  try{
+    await sb.rpc('admin_update_user',{p_target_id:notesTargetId.uid,p_field:'notes',p_value:txt});
+    var idx=allUsers.findIndex(function(x){return x.id===notesTargetId.uid});
+    if(idx>-1)allUsers[idx].notes=txt;
+    closeM('m-notes');toast('Notes saved','suc');filterUsers();
+  }catch(e){toast('Error: '+e.message,'err')}
+}
+function confirmDelete(uid,email){
+  document.getElementById('conf-title').textContent='Delete User';
+  document.getElementById('conf-msg').textContent='This will permanently delete the account for:';
+  document.getElementById('conf-name').textContent=email;
+  confirmFn=async function(){
+    try{
+      await sb.rpc('admin_delete_user',{p_target_id:uid});
+      await sb.rpc('log_audit',{p_action:'delete_user',p_details:{email:email}});
+      allUsers=allUsers.filter(function(x){return x.id!==uid});
+      closeM('m-confirm');toast('User deleted','suc');filterUsers();loadStats();
+    }catch(e){toast('Delete error: '+e.message,'err')}
+  };
+  openM('m-confirm');
+}
+function runConfirm(){if(confirmFn)confirmFn()}
+function exportCSV(){
+  var hdr='Email,Full Name,Plan,Active,Joined\n';
+  var rows=filteredUsers.map(function(u){
+    var planName='';
+    if(u.plan_id){var p=allPlans.find(function(x){return x.id===u.plan_id});if(p)planName=p.name}
+    return[u.email,u.full_name||'',planName,u.is_active?'Yes':'No',fmtDate(u.created_at)].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"'}).join(',');
+  }).join('\n');
+  var blob=new Blob([hdr+rows],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='users-export.csv';a.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PLANS
+// ═══════════════════════════════════════════════════════════════════
+async function loadAllPlans(){
+  var r=await sb.from('plans').select('*').order('sort_order');
+  allPlans=r.data||[];
+}
+async function renderPlans(){
+  await loadAllPlans();
+  var grid=document.getElementById('plan-grid');
+  if(!allPlans.length){grid.innerHTML='<div style="color:var(--t3);font-size:.85rem">No plans yet. Click + New Plan.</div>';return}
+  // count users per plan
+  var counts={};
+  allUsers.forEach(function(u){if(u.plan_id)counts[u.plan_id]=(counts[u.plan_id]||0)+1});
+  grid.innerHTML=allPlans.map(function(p){
+    var uc=counts[p.id]||0;
+    // count apps in plan
+    return '<div class="plan-card">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between">'
+      +'<div class="pc-name">'+esc(p.name)+'</div>'
+      +(p.is_active?'<span class="bdg bdg-en">Active</span>':'<span class="bdg bdg-dis">Inactive</span>')
+      +'</div>'
+      +'<div class="pc-desc">'+(p.description?esc(p.description):'<em style="color:var(--t3)">No description</em>')+'</div>'
+      +'<div class="pc-meta"><div class="pc-stat"><strong>'+uc+'</strong> user'+(uc!==1?'s':'')+'</div></div>'
+      +'<div class="pc-acts">'
+      +'<button class="btn b-gh btn-sm" onclick="openPlanApps(\''+p.id+'\',\''+esc(p.name)+'\')">🗂 Manage Apps</button>'
+      +'<button class="btn b-gh btn-sm" onclick="openPlanModal(\''+p.id+'\')">✏️ Edit</button>'
+      +'<button class="btn b-dan btn-sm" onclick="confirmDeletePlan(\''+p.id+'\',\''+esc(p.name)+'\')">🗑</button>'
+      +'</div></div>';
+  }).join('');
+}
+function openPlanModal(id){
+  editPlanId=id;
+  document.getElementById('pm-title').textContent=id?'Edit Plan':'New Plan';
+  document.getElementById('pn-fld').classList.remove('inv');
+  if(id){
+    var p=allPlans.find(function(x){return x.id===id});
+    if(p){document.getElementById('pm-name').value=p.name;document.getElementById('pm-desc').value=p.description||'';document.getElementById('pm-active').checked=p.is_active}
+  }else{document.getElementById('pm-name').value='';document.getElementById('pm-desc').value='';document.getElementById('pm-active').checked=true}
+  openM('m-plan');
+}
+async function savePlan(){
+  var name=document.getElementById('pm-name').value.trim();
+  if(!name){document.getElementById('pn-fld').classList.add('inv');return}
+  document.getElementById('pn-fld').classList.remove('inv');
+  var btn=document.getElementById('pm-save');btn.disabled=true;btn.innerHTML='<span class="spin"></span>Saving…';
+  try{
+    var payload={name:name,description:document.getElementById('pm-desc').value.trim(),is_active:document.getElementById('pm-active').checked};
+    if(editPlanId){await sb.from('plans').update(payload).eq('id',editPlanId)}
+    else{await sb.from('plans').insert(payload)}
+    await sb.rpc('log_audit',{p_action:editPlanId?'edit_plan':'create_plan',p_details:{name:name}});
+    closeM('m-plan');toast(editPlanId?'Plan updated':'Plan created','suc');
+    await loadAllPlans();renderPlans();
+  }catch(e){toast('Error: '+e.message,'err')}
+  btn.disabled=false;btn.innerHTML='Save Plan';
+}
+function confirmDeletePlan(id,name){
+  document.getElementById('conf-title').textContent='Delete Plan';
+  document.getElementById('conf-msg').textContent='Delete this plan? Users on this plan will lose their assignment.';
+  document.getElementById('conf-name').textContent=name;
+  confirmFn=async function(){
+    try{
+      await sb.from('plans').delete().eq('id',id);
+      await sb.rpc('log_audit',{p_action:'delete_plan',p_details:{name:name}});
+      closeM('m-confirm');toast('Plan deleted','suc');await loadAllPlans();renderPlans();loadStats();
+    }catch(e){toast('Error: '+e.message,'err')}
+  };
+  openM('m-confirm');
+}
+
+// ─── Plan → Apps assignment ─────────────────────────────────────
+async function openPlanApps(planId,planName){
+  planAppsTargetId=planId;
+  document.getElementById('pam-title').textContent='Manage Apps — '+planName;
+  document.getElementById('acl').innerHTML='<div style="text-align:center;padding:20px;color:var(--t3)">Loading…</div>';
+  openM('m-paApps');
+  // Load current app_ids for this plan
+  var r=await sb.from('plan_apps').select('app_id').eq('plan_id',planId);
+  var current=new Set((r.data||[]).map(function(x){return x.app_id}));
+  document.getElementById('acl').innerHTML=allApps.length?allApps.map(function(a){
+    return '<div class="aci"><input type="checkbox" id="acp-'+a.id+'"'+(current.has(a.id)?' checked':'')+'>'
+      +'<span class="aci-ico">'+(a.icon||'🔬')+'</span>'
+      +'<div><div class="aci-nm">'+esc(a.name)+'</div><div class="aci-sl">'+esc(a.slug)+'</div></div>'
+      +'</div>';
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--t3)">No apps registered yet.</div>';
+}
+async function savePlanApps(){
+  if(!planAppsTargetId)return;
+  var checked=Array.from(document.querySelectorAll('#acl input[type=checkbox]:checked')).map(function(el){return el.id.replace('acp-','')});
+  var btn=document.getElementById('pam-save');btn.disabled=true;btn.innerHTML='<span class="spin"></span>Saving…';
+  try{
+    await sb.rpc('admin_set_plan_apps',{p_plan_id:planAppsTargetId,p_app_ids:checked.length?checked:[]});
+    await sb.rpc('log_audit',{p_action:'set_plan_apps',p_details:{plan_id:planAppsTargetId,count:checked.length}});
+    closeM('m-paApps');toast('Plan apps saved','suc');
+  }catch(e){toast('Error: '+e.message,'err')}
+  btn.disabled=false;btn.innerHTML='Save Changes';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// APPS
+// ═══════════════════════════════════════════════════════════════════
+async function loadAllApps(){
+  var r=await sb.from('apps').select('*').order('sort_order').order('name');
+  allApps=r.data||[];
+}
+async function renderApps(){
+  await loadAllApps();
+  // For each app, count how many plans include it
+  var planCountMap={};
+  var r=await sb.from('plan_apps').select('app_id,plan_id');
+  (r.data||[]).forEach(function(x){planCountMap[x.app_id]=(planCountMap[x.app_id]||0)+1});
+  var tbody=document.getElementById('atbl');
+  if(!allApps.length){tbody.innerHTML='<tr class="erow"><td colspan="6">No apps registered. Click + Register App.</td></tr>';return}
+  tbody.innerHTML=allApps.map(function(a){
+    var pc=planCountMap[a.id]||0;
+    return '<tr>'
+      +'<td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:1.2rem">'+(a.icon||'🔬')+'</span><div><div style="font-weight:600;color:var(--t1);font-size:.84rem">'+esc(a.name)+'</div><div style="font-size:.72rem;color:var(--t2)">'+esc(a.description||'')+'</div></div></div></td>'
+      +'<td><span class="slug">'+esc(a.slug)+'</span></td>'
+      +'<td>'+(a.url?'<a class="aurl" href="'+esc(a.url)+'" target="_blank" rel="noopener">'+esc(a.url)+'</a>':'<span style="color:var(--t3);font-size:.75rem">—</span>')+'</td>'
+      +'<td><span style="font-size:.8rem;color:var(--t2)">'+pc+' plan'+(pc!==1?'s':'')+'</span></td>'
+      +'<td>'+(a.is_active?'<span class="bdg bdg-en">Active</span>':'<span class="bdg bdg-dis">Disabled</span>')+'</td>'
+      +'<td><div class="acts">'
+      +'<button class="ab" title="Edit" onclick="openAppModal(\''+a.id+'\')">✏️</button>'
+      +(a.is_active
+        ?'<button class="ab warn" title="Disable app" onclick="toggleApp(\''+a.id+'\',false,\''+esc(a.name)+'\')">⏸</button>'
+        :'<button class="ab suc" title="Enable app" onclick="toggleApp(\''+a.id+'\',true,\''+esc(a.name)+'\')">▶</button>')
+      +'<button class="ab dan" title="Delete" onclick="confirmDeleteApp(\''+a.id+'\',\''+esc(a.name)+'\')">🗑</button>'
+      +'</div></td></tr>';
+  }).join('');
+}
+function openAppModal(id){
+  editAppId=id;
+  document.getElementById('am-title').textContent=id?'Edit Application':'Register Application';
+  document.getElementById('an-fld').classList.remove('inv');
+  document.getElementById('as-fld').classList.remove('inv');
+  if(id){
+    var a=allApps.find(function(x){return x.id===id});
+    if(a){
+      document.getElementById('am-name').value=a.name;
+      document.getElementById('am-slug').value=a.slug;
+      document.getElementById('am-url').value=a.url||'';
+      document.getElementById('am-desc').value=a.description||'';
+      document.getElementById('am-icon').value=a.icon||'🔬';
+      document.getElementById('am-sort').value=a.sort_order||0;
+      document.getElementById('am-active').checked=a.is_active;
+    }
+  }else{
+    document.getElementById('am-name').value='';
+    document.getElementById('am-slug').value='';
+    document.getElementById('am-url').value='';
+    document.getElementById('am-desc').value='';
+    document.getElementById('am-icon').value='🔬';
+    document.getElementById('am-sort').value='0';
+    document.getElementById('am-active').checked=true;
+  }
+  openM('m-app');
+}
+function slugify(){
+  if(!editAppId){
+    var s=document.getElementById('am-name').value.toLowerCase()
+      .replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    document.getElementById('am-slug').value=s;
+  }
+  // if editing, don't auto-change slug
+}
+async function saveApp(){
+  var name=document.getElementById('am-name').value.trim();
+  var slug=document.getElementById('am-slug').value.trim().toLowerCase();
+  var ok=true;
+  if(!name){document.getElementById('an-fld').classList.add('inv');ok=false}else{document.getElementById('an-fld').classList.remove('inv')}
+  if(!slug||!/^[a-z0-9\-]+$/.test(slug)){document.getElementById('as-fld').classList.add('inv');ok=false}else{document.getElementById('as-fld').classList.remove('inv')}
+  if(!ok)return;
+  var btn=document.getElementById('am-save');btn.disabled=true;btn.innerHTML='<span class="spin"></span>Saving…';
+  try{
+    var payload={name:name,slug:slug,url:document.getElementById('am-url').value.trim()||null,
+      description:document.getElementById('am-desc').value.trim()||null,
+      icon:document.getElementById('am-icon').value.trim()||'🔬',
+      sort_order:parseInt(document.getElementById('am-sort').value)||0,
+      is_active:document.getElementById('am-active').checked};
+    if(editAppId){await sb.from('apps').update(payload).eq('id',editAppId)}
+    else{await sb.from('apps').insert(payload)}
+    await sb.rpc('log_audit',{p_action:editAppId?'edit_app':'create_app',p_details:{slug:slug}});
+    closeM('m-app');toast(editAppId?'App updated':'App registered','suc');
+    await loadAllApps();renderApps();loadStats();
+  }catch(e){toast('Error: '+(e.message||'slug may be taken'),'err')}
+  btn.disabled=false;btn.innerHTML='Save App';
+}
+async function toggleApp(id,active,name){
+  try{
+    await sb.from('apps').update({is_active:active}).eq('id',id);
+    await sb.rpc('log_audit',{p_action:active?'enable_app':'disable_app',p_details:{name:name}});
+    var idx=allApps.findIndex(function(x){return x.id===id});
+    if(idx>-1)allApps[idx].is_active=active;
+    toast(active?'App enabled':'App disabled','suc');renderApps();
+  }catch(e){toast('Error: '+e.message,'err')}
+}
+function confirmDeleteApp(id,name){
+  document.getElementById('conf-title').textContent='Delete Application';
+  document.getElementById('conf-msg').textContent='Remove this app from the registry? Users will lose access.';
+  document.getElementById('conf-name').textContent=name;
+  confirmFn=async function(){
+    try{
+      await sb.from('apps').delete().eq('id',id);
+      await sb.rpc('log_audit',{p_action:'delete_app',p_details:{name:name}});
+      closeM('m-confirm');toast('App deleted','suc');await loadAllApps();renderApps();loadStats();
+    }catch(e){toast('Error: '+e.message,'err')}
+  };
+  openM('m-confirm');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════════════
+async function loadAudit(){
+  try{
+    var r=await sb.rpc('admin_get_recent_audit',{p_limit:500});
+    allLogs=r.data||[];filterLog();
+  }catch(e){toast('Log error: '+e.message,'err')}
+}
+function filterLog(){
+  var q=(document.getElementById('log-q').value||'').toLowerCase();
+  filteredLogs=allLogs.filter(function(l){
+    return !q||(l.action||'').toLowerCase().includes(q)||(l.actor_email||'').toLowerCase().includes(q)||(l.target_user_email||'').toLowerCase().includes(q);
+  });
+  logPage=1;renderLogPage();
+}
+function renderLogPage(){
+  var start=(logPage-1)*logPPG;
+  var slice=filteredLogs.slice(start,start+logPPG);
+  var tbody=document.getElementById('logtbl');
+  if(!slice.length){tbody.innerHTML='<tr class="erow"><td colspan="5">No log entries found.</td></tr>';renderLogPager();return}
+  tbody.innerHTML=slice.map(function(l){
+    var det='';
+    try{var d=typeof l.details==='string'?JSON.parse(l.details):l.details;det=Object.entries(d).map(function(kv){return kv[0]+': '+kv[1]}).join(', ')}catch(_){}
+    return '<tr><td class="log-ts">'+fmtDt(l.created_at)+'</td>'
+      +'<td style="font-size:.8rem;color:var(--t2)">'+esc(l.actor_email||'—')+'</td>'
+      +'<td><span class="log-act">'+esc(l.action)+'</span></td>'
+      +'<td style="font-size:.8rem;color:var(--t2)">'+esc(l.target_user_email||'—')+'</td>'
+      +'<td class="log-det" title="'+esc(det)+'">'+esc(det.substring(0,60))+'</td></tr>';
+  }).join('');
+  renderLogPager();
+}
+function renderLogPager(){
+  var total=Math.ceil(filteredLogs.length/logPPG);
+  var el=document.getElementById('logpager');
+  if(total<=1){el.innerHTML='';return}
+  var html='<span class="pgr-inf">Page '+logPage+' / '+total+'</span>';
+  if(logPage>1)html='<button class="pgr" onclick="goLPage('+(logPage-1)+')">‹</button>'+html;
+  if(logPage<total)html+=('<button class="pgr" onclick="goLPage('+(logPage+1)+')">›</button>');
+  el.innerHTML=html;
+}
+function goLPage(p){logPage=p;renderLogPage()}
+
+// ═══════════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function openM(id){document.getElementById(id).classList.add('open')}
+function closeM(id){document.getElementById(id).classList.remove('open')}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')document.querySelectorAll('.mbd.open').forEach(function(m){m.classList.remove('open')})});
+
+// ═══════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════
+function toast(msg,type){
+  type=type||'info';
+  var icons={suc:'✅',err:'❌',info:'ℹ️'};
+  var t=document.createElement('div');
+  t.className='toast '+(type==='suc'?'suc':type==='err'?'err':'');
+  t.innerHTML='<span class="ticon">'+icons[type]+'</span><span class="tmsg">'+esc(msg)+'</span>'
+    +'<button class="tx" onclick="this.parentElement.remove()">✕</button>';
+  document.getElementById('toast-wrap').appendChild(t);
+  setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove()},250)},4000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════════
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
+function fmtDt(s){if(!s)return'—';var d=new Date(s);return d.toLocaleDateString()+'  '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
+function fmtDate(s){if(!s)return'—';return new Date(s).toLocaleDateString()}
+</script>
+</body></html>

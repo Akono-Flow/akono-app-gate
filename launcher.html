@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Apps — SCQ Learning Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-0:#050911;--bg-1:#0a0f1e;--bg-2:#111827;--bg-3:#1a2236;--bg-4:#1e2d40;
+  --border:#1e3a5f;--border-s:rgba(255,255,255,.06);
+  --accent:#2563eb;--accent-h:#1d4ed8;--accent-dim:rgba(37,99,235,.12);
+  --teal:#0891b2;--teal-dim:rgba(8,145,178,.12);
+  --success:#059669;--danger:#dc2626;--warning:#d97706;
+  --t1:#f1f5f9;--t2:#94a3b8;--t3:#475569;
+  --r:10px;--r-lg:16px;--shadow:0 4px 24px rgba(0,0,0,.4);
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif
+}
+html,body{min-height:100%;font-family:var(--font);background:var(--bg-0);color:var(--t1)}
+body{
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 0%,rgba(37,99,235,.12) 0%,transparent 60%);
+}
+
+/* ── Page loader ── */
+#page-loader{
+  position:fixed;inset:0;background:var(--bg-0);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:9999;gap:16px
+}
+.loader-emblem{
+  width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;font-weight:800;color:#fff;margin-bottom:4px
+}
+.loader-pulse{
+  width:40px;height:4px;background:var(--bg-3);border-radius:2px;overflow:hidden
+}
+.loader-pulse::after{
+  content:'';display:block;height:100%;width:40%;
+  background:var(--accent);border-radius:2px;
+  animation:pulse-slide 1.2s ease-in-out infinite
+}
+@keyframes pulse-slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+.loader-text{font-size:.78rem;color:var(--t3);letter-spacing:.06em;text-transform:uppercase}
+
+/* ── Navbar ── */
+.navbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(10,15,30,.85);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px
+}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-emblem{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:800;color:#fff
+}
+.nav-name{font-size:.92rem;font-weight:700;color:var(--t1)}
+.nav-right{display:flex;align-items:center;gap:12px}
+.nav-user{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg-3);border:1px solid var(--border);
+  padding:5px 10px 5px 5px;border-radius:40px
+}
+.nav-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.72rem;font-weight:700;color:#fff;flex-shrink:0
+}
+.nav-user-name{font-size:.8rem;color:var(--t1);font-weight:500;max-width:120px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-plan-badge{
+  font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:10px;
+  background:var(--accent-dim);color:#93c5fd;letter-spacing:.04em
+}
+.btn-logout{
+  padding:7px 14px;background:transparent;border:1px solid var(--border);
+  border-radius:var(--r);color:var(--t2);font-size:.8rem;font-family:var(--font);
+  cursor:pointer;transition:all .18s
+}
+.btn-logout:hover{border-color:var(--danger);color:#fca5a5}
+
+/* ── Main content ── */
+.main{max-width:1100px;margin:0 auto;padding:48px 24px 80px}
+
+/* ── Welcome ── */
+.welcome{margin-bottom:40px}
+.welcome-greeting{font-size:1.7rem;font-weight:800;color:var(--t1);letter-spacing:-.03em}
+.welcome-sub{font-size:.9rem;color:var(--t2);margin-top:6px}
+.welcome-meta{
+  display:flex;align-items:center;gap:16px;margin-top:14px;
+  flex-wrap:wrap
+}
+.meta-chip{
+  display:flex;align-items:center;gap:6px;padding:5px 12px;
+  background:var(--bg-3);border:1px solid var(--border);border-radius:20px;
+  font-size:.78rem;color:var(--t2)
+}
+.meta-chip .dot{width:7px;height:7px;border-radius:50%}
+.dot-green{background:#10b981}
+.dot-blue{background:var(--accent)}
+
+/* ── Section heading ── */
+.section-head{
+  display:flex;align-items:center;gap:12px;margin-bottom:24px
+}
+.section-title{font-size:1rem;font-weight:700;color:var(--t1)}
+.section-count{
+  font-size:.75rem;padding:2px 8px;background:var(--bg-3);
+  border:1px solid var(--border);border-radius:10px;color:var(--t2)
+}
+.section-line{flex:1;height:1px;background:var(--border)}
+
+/* ── App grid ── */
+.app-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:20px
+}
+
+/* ── App card ── */
+.app-card{
+  background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:24px;display:flex;flex-direction:column;gap:14px;
+  transition:transform .18s,border-color .18s,box-shadow .18s;
+  position:relative;overflow:hidden
+}
+.app-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--teal));
+  opacity:0;transition:opacity .18s
+}
+.app-card:hover{
+  transform:translateY(-3px);
+  border-color:rgba(37,99,235,.4);
+  box-shadow:0 8px 32px rgba(37,99,235,.15)
+}
+.app-card:hover::before{opacity:1}
+
+.app-icon{
+  width:52px;height:52px;border-radius:12px;
+  background:var(--accent-dim);border:1px solid rgba(37,99,235,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.7rem;flex-shrink:0
+}
+.app-name{font-size:1rem;font-weight:700;color:var(--t1);line-height:1.2}
+.app-desc{font-size:.82rem;color:var(--t2);line-height:1.55;flex:1}
+.app-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.app-slug{
+  font-size:.7rem;font-family:'Cascadia Code','Fira Code',monospace;
+  color:var(--t3);background:var(--bg-3);padding:2px 7px;border-radius:5px
+}
+.btn-launch{
+  padding:8px 18px;background:var(--accent);color:#fff;border:none;
+  border-radius:var(--r);font-size:.82rem;font-weight:600;font-family:var(--font);
+  cursor:pointer;transition:all .18s;text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px
+}
+.btn-launch:hover{background:var(--accent-h);transform:translateX(2px)}
+
+/* ── Empty state ── */
+.empty{
+  text-align:center;padding:64px 24px;
+  background:var(--bg-2);border:1px dashed var(--border);
+  border-radius:var(--r-lg)
+}
+.empty-icon{font-size:3rem;margin-bottom:16px}
+.empty-title{font-size:1.05rem;font-weight:700;color:var(--t1);margin-bottom:8px}
+.empty-msg{font-size:.85rem;color:var(--t2);max-width:360px;margin:0 auto;line-height:1.6}
+
+/* ── Account section ── */
+.account-card{
+  background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:24px;margin-top:40px;display:flex;align-items:center;
+  gap:20px;flex-wrap:wrap
+}
+.account-avatar{
+  width:52px;height:52px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;font-weight:700;color:#fff
+}
+.account-info{flex:1;min-width:0}
+.account-name{font-size:1rem;font-weight:700;color:var(--t1)}
+.account-email{font-size:.82rem;color:var(--t2);margin-top:2px}
+.account-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.badge{
+  font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:10px;letter-spacing:.04em
+}
+.badge-active{background:rgba(5,150,105,.15);color:#34d399;border:1px solid rgba(5,150,105,.3)}
+.badge-plan{background:var(--accent-dim);color:#93c5fd;border:1px solid rgba(37,99,235,.3)}
+</style>
+</head>
+<body>
+
+<!-- Page loader -->
+<div id="page-loader">
+  <div class="loader-emblem" id="loader-emblem">SCQ</div>
+  <div class="loader-pulse"></div>
+  <div class="loader-text">Verifying access…</div>
+</div>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a class="nav-brand" href="#">
+    <div class="nav-emblem" id="nav-emblem">SCQ</div>
+    <div class="nav-name" id="nav-institution">SCQ Learning Portal</div>
+  </a>
+  <div class="nav-right">
+    <div class="nav-user" id="nav-user">
+      <div class="nav-avatar" id="nav-avatar">?</div>
+      <span class="nav-user-name" id="nav-username">Loading…</span>
+      <span class="nav-plan-badge" id="nav-plan" style="display:none"></span>
+    </div>
+    <button class="btn-logout" onclick="scqLogout()">Sign Out</button>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="main">
+  <!-- Welcome -->
+  <div class="welcome">
+    <div class="welcome-greeting">Welcome back, <span id="first-name">—</span></div>
+    <div class="welcome-sub">Select an application below to get started.</div>
+    <div class="welcome-meta" id="welcome-meta"></div>
+  </div>
+
+  <!-- Apps -->
+  <div class="section-head">
+    <div class="section-title">Your Applications</div>
+    <div class="section-count" id="app-count">—</div>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="app-grid" id="app-grid">
+    <!-- Skeleton cards while loading -->
+    <div class="app-card" style="opacity:.3;animation:pulse-slide 1.2s ease-in-out infinite">
+      <div style="width:52px;height:52px;border-radius:12px;background:var(--bg-3)"></div>
+      <div style="height:18px;width:60%;background:var(--bg-3);border-radius:4px"></div>
+      <div style="height:14px;width:85%;background:var(--bg-3);border-radius:4px"></div>
+      <div style="height:14px;width:70%;background:var(--bg-3);border-radius:4px"></div>
+    </div>
+  </div>
+
+  <!-- Account section -->
+  <div class="account-card" id="account-card" style="display:none">
+    <div class="account-avatar" id="acc-avatar">?</div>
+    <div class="account-info">
+      <div class="account-name" id="acc-name">—</div>
+      <div class="account-email" id="acc-email">—</div>
+      <div class="account-badges">
+        <span class="badge badge-active">● Active</span>
+        <span class="badge badge-plan" id="acc-plan">—</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(async function () {
+  // ── Apply branding ─────────────────────────────────────────────────────────
+  if (typeof PORTAL_CONFIG !== 'undefined') {
+    document.title = 'My Apps — ' + PORTAL_CONFIG.institutionName;
+    document.getElementById('nav-emblem').textContent     = PORTAL_CONFIG.logoInitials   || 'SCQ';
+    document.getElementById('loader-emblem').textContent  = PORTAL_CONFIG.logoInitials   || 'SCQ';
+    document.getElementById('nav-institution').textContent= PORTAL_CONFIG.institutionName|| 'Portal';
+  }
+
+  // ── Auth check ────────────────────────────────────────────────────────────
+  var auth = await requireAuth();
+  if (!auth) return;
+
+  var profile = auth.profile;
+  var name    = profile.full_name || profile.email.split('@')[0];
+  var initials= name.split(' ').map(function(n){return n[0]}).join('').toUpperCase().substring(0,2);
+
+  // ── Populate UI ────────────────────────────────────────────────────────────
+  document.getElementById('first-name').textContent = name.split(' ')[0];
+  document.getElementById('nav-avatar').textContent = initials;
+  document.getElementById('nav-username').textContent = name;
+
+  // Fetch plan name
+  var planName = 'No Plan Assigned';
+  if (profile.plan_id) {
+    var pr = await _scqSupabase.from('plans').select('name').eq('id', profile.plan_id).single();
+    if (pr && pr.data) planName = pr.data.name;
+  }
+  var planBadge = document.getElementById('nav-plan');
+  planBadge.textContent = planName;
+  planBadge.style.display = 'inline-block';
+
+  // Welcome meta chips
+  var metaEl = document.getElementById('welcome-meta');
+  metaEl.innerHTML = `
+    <div class="meta-chip"><span class="dot dot-green"></span>Account Active</div>
+    <div class="meta-chip"><span class="dot dot-blue"></span>${planName} Plan</div>
+    <div class="meta-chip">📧 ${profile.email}</div>
+  `;
+
+  // Account card
+  document.getElementById('acc-avatar').textContent  = initials;
+  document.getElementById('acc-name').textContent    = name;
+  document.getElementById('acc-email').textContent   = profile.email;
+  document.getElementById('acc-plan').textContent    = planName;
+  document.getElementById('account-card').style.display = 'flex';
+
+  // ── Load apps ──────────────────────────────────────────────────────────────
+  var apps = await getMyApps();
+  var grid  = document.getElementById('app-grid');
+  document.getElementById('app-count').textContent =
+    apps.length + ' app' + (apps.length !== 1 ? 's' : '');
+
+  if (!apps.length) {
+    grid.innerHTML = `
+      <div class="empty" style="grid-column:1/-1">
+        <div class="empty-icon">📦</div>
+        <div class="empty-title">No Applications Available</div>
+        <div class="empty-msg">
+          Your current plan doesn't include any applications yet. 
+          Contact your administrator to get access assigned.
+        </div>
+      </div>
+    `;
+  } else {
+    grid.innerHTML = apps.map(function(app) {
+      var icon = app.icon || '🔬';
+      var desc = app.description || 'Interactive learning application';
+      var url  = app.url || '#';
+      return `
+        <div class="app-card">
+          <div class="app-icon">${escHtml(icon)}</div>
+          <div>
+            <div class="app-name">${escHtml(app.name)}</div>
+          </div>
+          <div class="app-desc">${escHtml(desc)}</div>
+          <div class="app-footer">
+            <span class="app-slug">${escHtml(app.slug)}</span>
+            <a class="btn-launch" href="${escAttr(url)}" target="_blank" rel="noopener">
+              Launch →
+            </a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ── Remove loader ──────────────────────────────────────────────────────────
+  document.getElementById('page-loader').remove();
+})();
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function escAttr(s) {
+  return String(s).replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

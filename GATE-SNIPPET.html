@@ -1,0 +1,29 @@
+<!--
+  ══════════════════════════════════════════════════════════════════════
+  SCQ GATE SNIPPET  —  Add this to any existing app to gate it.
+  Replace YOUR_SLUG_HERE with the slug registered in the Admin Panel.
+  ══════════════════════════════════════════════════════════════════════
+-->
+
+<!-- 1. ADD TO <head> (before your own scripts) ─────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+
+<!-- 2. ADD AS FIRST ELEMENT inside <body> ──────────────────────────── -->
+<div id="page-loader" style="position:fixed;inset:0;background:#050911;display:flex;align-items:center;justify-content:center;z-index:9999;font-family:monospace;color:#2563eb;font-size:1.1rem;flex-direction:column;gap:12px">
+  <span style="font-size:2rem">🔒</span>Verifying access…
+</div>
+
+<!-- 3. REPLACE your DOMContentLoaded / init call with this ─────────── -->
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const auth = await requireAppAccess('YOUR_SLUG_HERE', 'no-access.html');
+  if (!auth) return;
+  document.getElementById('page-loader').remove();
+  await init(); // ← replace init() with your app's actual start function
+});
+</script>
+
+<!-- 4. SIGN-OUT BUTTON anywhere in your app ────────────────────────── -->
+<button onclick="scqLogout()">Sign Out</button>
