@@ -7,7 +7,6 @@
   <!-- SCQ Auth System — add these in this order -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/config.js"></script>
-<script src="js/auth.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -180,12 +179,6 @@ body::before{
 </style>
 </head>
 <body>
-<div id="page-loader" style="
-  position:fixed;inset:0;background:#050911;
-  display:flex;align-items:center;justify-content:center;
-  z-index:9999;font-family:monospace;color:#2563eb;font-size:1.1rem;
-  flex-direction:column;gap:12px;
-">
   <span style="font-size:2rem">🔒</span>
   Verifying access…
 </div>
