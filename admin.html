@@ -255,6 +255,42 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
   .r2{grid-template-columns:1fr}
 }
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:140}
+/* ── WHO'S ONLINE ── */
+.nav-badge-green{background:var(--success)}
+.stat-card.clickable{cursor:pointer;transition:border-color .18s,transform .18s}
+.stat-card.clickable:hover{transform:translateY(-2px);border-color:#10b981}
+.c-emerald{border-color:#10b981}
+.online-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.online-card{background:var(--bg-2);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:16px;display:flex;align-items:flex-start;gap:12px;position:relative}
+.online-card.fresh{border-color:rgba(16,185,129,.35);box-shadow:0 0 0 1px rgba(16,185,129,.15)}
+.online-card.stale{border-color:rgba(217,119,6,.3)}
+.oc-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#0891b2);
+  display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;
+  color:#fff;flex-shrink:0}
+.oc-body{flex:1;min-width:0}
+.oc-name{font-size:.86rem;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oc-email{font-size:.72rem;color:var(--t2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oc-meta{display:flex;align-items:center;gap:7px;margin-top:8px;flex-wrap:wrap}
+.oc-app{font-family:var(--mono);font-size:.68rem;background:var(--teal-dim);
+  color:#67e8f9;border:1px solid rgba(8,145,178,.25);padding:2px 7px;border-radius:4px}
+.oc-app.launcher{background:var(--accent-dim);color:#93c5fd;border-color:rgba(37,99,235,.25)}
+.oc-time{font-size:.7rem;color:var(--t3)}
+.oc-dot{position:absolute;top:14px;right:14px;width:9px;height:9px;border-radius:50%}
+.oc-dot.fresh{background:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.2)}
+.oc-dot.stale{background:var(--warning)}
+.online-empty{text-align:center;padding:48px 24px;background:var(--bg-2);
+  border:1px dashed var(--border);border-radius:var(--r-lg);color:var(--t3);font-size:.85rem}
+.online-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.online-hdr-left{display:flex;align-items:center;gap:12px}
+.online-title{font-size:.88rem;font-weight:700;color:var(--t1)}
+.online-count-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  background:var(--success-dim);border:1px solid rgba(5,150,105,.3);
+  border-radius:12px;font-size:.73rem;font-weight:700;color:#34d399}
+.online-count-chip .pulse{width:7px;height:7px;border-radius:50%;background:#10b981;
+  animation:pulse-anim 2s ease-in-out infinite}
+@keyframes pulse-anim{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+.refresh-hint{font-size:.7rem;color:var(--t3)}
 </style>
 </head>
 <body>
@@ -280,6 +316,9 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
       <div class="nav-sec">Management</div>
       <button class="nav-item" id="nav-users" onclick="showPanel('users')">
         <span class="ni">👥</span>Users<span class="nav-badge" id="pending-badge" style="display:none">0</span>
+      </button>
+      <button class="nav-item" id="nav-online" onclick="showPanel('online')">
+        <span class="ni">🟢</span>Who's Online<span class="nav-badge nav-badge-green" id="online-badge" style="display:none">0</span>
       </button>
       <button class="nav-item" onclick="showPanel('plans')"><span class="ni">📦</span>Plans</button>
       <button class="nav-item" onclick="showPanel('apps')"><span class="ni">🗂️</span>Applications</button>
@@ -312,7 +351,12 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
           <div class="stat-card c-yellow"><div class="stat-lbl">Pending Approval</div><div class="stat-val" id="s-pending">—</div><div class="stat-hint">Awaiting activation</div></div>
           <div class="stat-card c-teal"><div class="stat-lbl">Applications</div><div class="stat-val" id="s-apps">—</div><div class="stat-hint" id="s-apps-h"></div></div>
           <div class="stat-card c-blue"><div class="stat-lbl">Plans</div><div class="stat-val" id="s-plans">—</div><div class="stat-hint">Subscription tiers</div></div>
-          <div class="stat-card c-teal"><div class="stat-lbl">Recent Logins</div><div class="stat-val" id="s-sess">—</div><div class="stat-hint">In the last 24 hours</div></div>
+          <div class="stat-card c-teal"><div class="stat-lbl">Recent Logins</div><div class="stat-val" id="s-logins">—</div><div class="stat-hint">In the last 24 hours</div></div>
+          <div class="stat-card c-emerald clickable" title="Click to view who's online" onclick="showPanel('online')">
+            <div class="stat-lbl">Online Now</div>
+            <div class="stat-val" id="s-online">—</div>
+            <div class="stat-hint">Active in last 5 min · click to view</div>
+          </div>
         </div>
         <div class="sec-hd"><div class="sec-ttl">Recent Activity</div><button class="btn b-gh btn-sm" onclick="showPanel('audit')">View All →</button></div>
         <div class="twrap"><table class="dt"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead><tbody id="recent-log"></tbody></table></div>
@@ -331,6 +375,23 @@ hr.ndiv{border:none;border-top:1px solid var(--border);margin:6px 0}
         </div>
         <div class="twrap"><table class="dt"><thead><tr><th>User</th><th>Plan</th><th>Status</th><th>Joined</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="utbl"></tbody></table></div>
         <div id="upager" class="pager"></div>
+      </div>
+      <!-- WHO'S ONLINE -->
+      <div class="panel" id="panel-online">
+        <div class="online-hdr">
+          <div class="online-hdr-left">
+            <div class="online-title">Who's Online</div>
+            <div class="online-count-chip" id="online-chip">
+              <span class="pulse"></span>
+              <span id="online-chip-count">0 online</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="refresh-hint" id="online-refresh-hint"></span>
+            <button class="btn b-gh btn-sm" onclick="loadOnlineUsers(true)">↻ Refresh</button>
+          </div>
+        </div>
+        <div id="online-grid" class="online-grid"></div>
       </div>
       <!-- PLANS -->
       <div class="panel" id="panel-plans">
@@ -447,6 +508,7 @@ var allLogs=[], filteredLogs=[], logPage=1, logPPG=40;
 var editPlanId=null, editAppId=null, planAppsTargetId=null;
 var notesTargetId=null, confirmFn=null;
 var currentPanel='overview';
+var onlineRefreshInterval=null, onlineLastRefresh=null;
 
 // ═══════════════════════════════════════════════════════════════════
 // BOOT
@@ -475,6 +537,12 @@ var currentPanel='overview';
   document.getElementById('layout').style.visibility='visible';
   await Promise.all([loadStats(),loadRecentLog(),loadAllPlans(),loadAllApps()]);
   await loadUsers();
+
+  // Auto-refresh online panel every 60 seconds
+  onlineRefreshInterval = setInterval(function(){
+    if(currentPanel==='online') loadOnlineUsers(false);
+    updateOnlineBadge();
+  }, 60000);
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -483,6 +551,7 @@ var currentPanel='overview';
 var panelMeta={
   overview:{title:'Dashboard',sub:'System overview'},
   users:   {title:'Users',    sub:'Manage user accounts and access'},
+  online:  {title:'Who\'s Online', sub:'Students and users active in the last 5 minutes'},
   plans:   {title:'Plans',    sub:'Manage subscription tiers'},
   apps:    {title:'Applications',sub:'Manage the app registry'},
   audit:   {title:'Audit Log',sub:'All admin and auth events'}
@@ -499,6 +568,7 @@ function showPanel(id){
   document.getElementById('tb-sub').textContent=m.sub;
   closeSidebar();
   if(id==='users')   loadUsers();
+  if(id==='online')  loadOnlineUsers(true);
   if(id==='plans')   renderPlans();
   if(id==='apps')    renderApps();
   if(id==='audit')   loadAudit();
@@ -524,7 +594,14 @@ async function loadStats(){
     document.getElementById('s-apps').textContent=d.total_apps;
     document.getElementById('s-apps-h').textContent=d.active_apps+' active';
     document.getElementById('s-plans').textContent=d.total_plans;
-    document.getElementById('s-sess').textContent=d.recent_logins;
+    document.getElementById('s-logins').textContent=d.recent_logins;
+    // Online now
+    var onlineCount=d.online_now||0;
+    document.getElementById('s-online').textContent=onlineCount;
+    var ob=document.getElementById('online-badge');
+    if(onlineCount>0){ob.textContent=onlineCount;ob.style.display='flex'}
+    else{ob.style.display='none'}
+    // Pending badge
     var pb=document.getElementById('pending-badge');
     if(d.pending_users>0){pb.textContent=d.pending_users;pb.style.display='flex'}
     else{pb.style.display='none'}
@@ -544,6 +621,94 @@ async function loadRecentLog(){
     }).join('');
   }catch(e){console.warn(e)}
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// WHO'S ONLINE
+// ═══════════════════════════════════════════════════════════════════
+async function loadOnlineUsers(showLoading){
+  var grid=document.getElementById('online-grid');
+  if(showLoading){
+    grid.innerHTML='<div class="online-empty">Loading…</div>';
+  }
+  try{
+    var r=await sb.rpc('admin_get_online_users');
+    if(r.error)throw r.error;
+    var users=r.data||[];
+    onlineLastRefresh=new Date();
+
+    // Update chip count
+    document.getElementById('online-chip-count').textContent=users.length+' online';
+
+    // Update sidebar badge and stat card
+    var ob=document.getElementById('online-badge');
+    if(users.length>0){ob.textContent=users.length;ob.style.display='flex'}
+    else{ob.style.display='none'}
+    document.getElementById('s-online').textContent=users.length;
+
+    updateRefreshHint();
+
+    if(!users.length){
+      grid.innerHTML='<div class="online-empty">🎓 No students online right now.<br><span style="font-size:.78rem;margin-top:6px;display:block">This panel auto-refreshes every 60 seconds.</span></div>';
+      return;
+    }
+
+    var now=new Date();
+    grid.innerHTML=users.map(function(u){
+      var name=u.full_name||(u.email.split('@')[0]);
+      var ini=name.split(' ').map(function(n){return n[0]}).join('').toUpperCase().substring(0,2);
+      var app=u.current_app||'unknown';
+      var isLauncher=(app==='launcher'||app==='admin');
+      var lastSeenDate=new Date(u.last_seen);
+      var diffMs=now-lastSeenDate;
+      var diffMin=Math.floor(diffMs/60000);
+      var isFresh=diffMin<2;
+      var freshClass=isFresh?'fresh':'stale';
+      var timeStr=diffMin===0?'Just now':(diffMin===1?'1 min ago':(diffMin+' min ago'));
+      var appLabel=isLauncher
+        ?('<span class="oc-app launcher">'+(app==='admin'?'admin panel':'launcher')+'</span>')
+        :('<span class="oc-app">'+esc(app)+'</span>');
+      return '<div class="online-card '+freshClass+'">'
+        +'<div class="oc-av">'+esc(ini)+'</div>'
+        +'<div class="oc-body">'
+          +'<div class="oc-name">'+esc(name)+'</div>'
+          +'<div class="oc-email">'+esc(u.email)+'</div>'
+          +'<div class="oc-meta">'
+            +appLabel
+            +(u.plan_name?'<span class="bdg bdg-plan">'+esc(u.plan_name)+'</span>':'')
+            +'<span class="oc-time">'+timeStr+'</span>'
+          +'</div>'
+        +'</div>'
+        +'<div class="oc-dot '+freshClass+'"></div>'
+      +'</div>';
+    }).join('');
+  }catch(e){
+    grid.innerHTML='<div class="online-empty" style="color:#fca5a5">Error loading online users: '+esc(e.message||'unknown error')+'</div>';
+  }
+}
+
+async function updateOnlineBadge(){
+  try{
+    var r=await sb.rpc('admin_get_stats');
+    if(r.error||!r.data)return;
+    var onlineCount=r.data.online_now||0;
+    document.getElementById('s-online').textContent=onlineCount;
+    var ob=document.getElementById('online-badge');
+    if(onlineCount>0){ob.textContent=onlineCount;ob.style.display='flex'}
+    else{ob.style.display='none'}
+  }catch(_){}
+}
+
+function updateRefreshHint(){
+  var el=document.getElementById('online-refresh-hint');
+  if(!onlineLastRefresh){el.textContent='';return}
+  var sec=Math.round((new Date()-onlineLastRefresh)/1000);
+  el.textContent='Last updated '+(sec<5?'just now':(sec+' sec ago'));
+}
+
+// Update the "last updated X sec ago" hint every 10 seconds
+setInterval(function(){
+  if(currentPanel==='online') updateRefreshHint();
+},10000);
 
 // ═══════════════════════════════════════════════════════════════════
 // USERS
