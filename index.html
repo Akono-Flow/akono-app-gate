@@ -175,6 +175,42 @@ body::before{
   transition:all .18s
 }
 .btn-ghost:hover{border-color:var(--t2);color:var(--t1)}
+  /* ── Feature-locked state ────────────────────────────────────── */
+/* Applied to any button whose feature flag is disabled.         */
+/* Shows "Upgrade to use this feature" tooltip on hover.         */
+
+.feature-locked {
+  opacity: 0.35;
+  cursor: not-allowed !important;
+  pointer-events: auto !important; /* keep pointer-events ON so tooltip shows */
+  position: relative;
+}
+
+/* Custom upgrade tooltip via ::after pseudo-element */
+.feature-locked::after {
+  content: 'Upgrade to use this feature';
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #e2e8f0;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 9999;
+}
+
+.feature-locked:hover::after {
+  opacity: 1;
+}
 </style>
 </head>
 <body>
